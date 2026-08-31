@@ -5,7 +5,7 @@ on:
     inputs:
       terraform_version:
         type: string
-        default: "1.14.0"
+        default: "1.16.0"
         
       tflint_version:
         type: string
