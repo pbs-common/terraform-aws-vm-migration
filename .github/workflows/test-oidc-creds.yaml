@@ -17,7 +17,7 @@ jobs:
       - name: Configure AWS credentials (dev)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          role-to-assume: ${{ environment.secrets.OIDC_ROLE_ARN }}
           aws-region: us-east-1
 
       - name: Check caller identity (dev)
@@ -34,7 +34,7 @@ jobs:
       - name: Configure AWS credentials (staging)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          role-to-assume: ${{ environment.secrets.OIDC_ROLE_ARN }}
           aws-region: us-east-1
 
       - name: Check caller identity (staging)
@@ -51,7 +51,7 @@ jobs:
       - name: Configure AWS credentials (prod)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          role-to-assume: ${{ environment.secrets.OIDC_ROLE_ARN }}
           aws-region: us-east-1
 
       - name: Check caller identity (prod)
@@ -68,7 +68,7 @@ jobs:
       - name: Configure AWS credentials (workspaces)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          role-to-assume: ${{ environment.secrets.OIDC_ROLE_ARN }}
           aws-region: us-east-1
 
       - name: Check caller identity (workspaces)
@@ -85,7 +85,7 @@ jobs:
       - name: Configure AWS credentials (ad)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          role-to-assume: ${{ environment.secrets.OIDC_ROLE_ARN }}
           aws-region: us-east-1
 
       - name: Check caller identity (ad)
