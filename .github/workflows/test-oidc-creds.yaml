@@ -1,0 +1,94 @@
+name: Test OIDC Credentials
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  test-dev:
+    name: Test Dev Environment
+    runs-on: ubuntu-latest
+    environment: dev
+    
+    steps:
+      - name: Configure AWS credentials (dev)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Check caller identity (dev)
+        run: |
+          echo "=== DEV Environment ===" 
+          aws sts get-caller-identity
+
+  test-staging:
+    name: Test Staging Environment
+    runs-on: ubuntu-latest
+    environment: staging
+    
+    steps:
+      - name: Configure AWS credentials (staging)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Check caller identity (staging)
+        run: |
+          echo "=== STAGING Environment ===" 
+          aws sts get-caller-identity
+
+  test-prod:
+    name: Test Prod Environment
+    runs-on: ubuntu-latest
+    environment: prod
+    
+    steps:
+      - name: Configure AWS credentials (prod)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Check caller identity (prod)
+        run: |
+          echo "=== PROD Environment ===" 
+          aws sts get-caller-identity
+
+  test-workspaces:
+    name: Test Workspaces Environment
+    runs-on: ubuntu-latest
+    environment: workspaces
+    
+    steps:
+      - name: Configure AWS credentials (workspaces)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Check caller identity (workspaces)
+        run: |
+          echo "=== WORKSPACES Environment ===" 
+          aws sts get-caller-identity
+
+  test-ad:
+    name: Test Ad Environment
+    runs-on: ubuntu-latest
+    environment: ad
+    
+    steps:
+      - name: Configure AWS credentials (ad)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Check caller identity (ad)
+        run: |
+          echo "=== AD Environment ===" 
+          aws sts get-caller-identity
