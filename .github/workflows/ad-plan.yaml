@@ -14,7 +14,6 @@ jobs:
       aws_region: us-east-1
       working_directory: environments/ad
       environment: ad
-      # TODO: set these to the real remote-state bucket/key for the ad environment.
       s3_backend_bucket: ${{ vars.AD_TF_STATE_BUCKET }}
       s3_backend_key: ad/terraform.tfstate
     secrets:
