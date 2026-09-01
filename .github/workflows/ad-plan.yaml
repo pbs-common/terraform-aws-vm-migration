@@ -1,0 +1,22 @@
+name: AD Environment Plan
+
+on:
+  pull_request:
+    paths:
+      - "environments/ad/**"
+      - "modules/ec2-windows-workload/**"
+  workflow_dispatch:
+
+jobs:
+  plan:
+    uses: ./.github/workflows/terraform-plan.yaml
+    with:
+      aws_region: us-east-1
+      working_directory: environments/ad
+      environment: ad
+      # TODO: set these to the real remote-state bucket/key for the ad environment.
+      s3_backend_bucket: ${{ vars.AD_TF_STATE_BUCKET }}
+      s3_backend_key: ad/terraform.tfstate
+    secrets:
+      OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
+      TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
