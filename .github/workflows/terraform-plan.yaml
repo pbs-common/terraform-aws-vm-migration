@@ -12,6 +12,7 @@ on:
         default: "0.45.0"
 
       aws_region:
+      
         type: string
         required: true
 
