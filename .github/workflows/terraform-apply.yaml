@@ -31,6 +31,11 @@ on:
         type: string
         required: true
 
+      plan_artifact_name:
+        type: string
+        description: "Name of the artifact containing the approved terraform plan (tfplan file)"
+        required: true
+
     secrets:
       OIDC_ROLE_ARN:
         required: true
@@ -53,7 +58,13 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout
+        uses: actions/checkout@v4
+
+      - name: Download Terraform Plan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.plan_artifact_name }}
+          path: ${{ inputs.working_directory }}
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6.2.3
@@ -87,4 +98,4 @@ jobs:
           TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
 
       - name: Terraform Apply
-        run: terraform apply --var-file ${{ inputs.environment }}.tfvars -auto-approve -input=false
+        run: terraform apply tfplan -input=false

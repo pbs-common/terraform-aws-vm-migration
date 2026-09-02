@@ -70,7 +70,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkoutv6.2.3
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6.2.3
@@ -161,6 +161,14 @@ jobs:
               repo: context.repo.repo,
               body: output
             });
+
+      - name: Upload Terraform Plan Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan-${{ inputs.environment }}
+          path: ${{ inputs.working_directory }}/tfplan
+          retention-days: 7
 
       - name: Fail on Plan Error
         if: steps.plan.outputs.exitcode == '1'

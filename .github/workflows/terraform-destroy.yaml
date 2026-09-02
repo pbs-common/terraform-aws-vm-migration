@@ -53,10 +53,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkoutv6.2.3
+        uses: actions/checkout@v4
 
       - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentialsv6.2.3
+        uses: aws-actions/configure-aws-credentials@v6.2.3
         with:
           role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
           aws-region: ${{ inputs.aws_region }}
@@ -87,9 +87,8 @@ jobs:
           TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
 
       - name: Terraform Destroy
-        # run: |
-        #   terraform destroy \
-        #     --var-file ${{ inputs.environment }}.tfvars \
-        #     -auto-approve \
-        #     -input=false
-        run: terraform plan --var-file ${{ inputs.environment }}.tfvars
+        run: |
+          terraform destroy \
+            --var-file ${{ inputs.environment }}.tfvars \
+            -auto-approve \
+            -input=false
