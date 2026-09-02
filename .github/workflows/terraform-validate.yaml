@@ -6,7 +6,7 @@ on:
       terraform_version:
         description: 'Terraform version to use'
         type: string
-        default: '1.14.0'
+        default: '1.16.0'
       working_directory:
         description: 'Directory containing Terraform files (for recursive fmt check)'
         type: string
@@ -22,7 +22,7 @@ jobs:
     runs-on: ${{ inputs.runs_on }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkoutv6.2.3
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
