@@ -21,16 +21,17 @@ locals {
   subnet_id = element(local.private_subnet_ids, 0)
   vpc_id    = data.aws_subnet.candidates[local.subnet_id].vpc_id
 
-  # One entry per (rule, CIDR) pair.
+  # One entry per (rule, CIDR) pair. Keyed by content, not list position, so
+  # adding/removing a rule or CIDR doesn't reshuffle unrelated existing keys.
   ingress_rules_flat = { for r in flatten([
-    for idx, rule in var.ingress_rules : [
-      for cidr in rule.cidr_blocks : merge(rule, { key = "${idx}-${cidr}", cidr_block = cidr })
+    for rule in var.ingress_rules : [
+      for cidr in rule.cidr_blocks : merge(rule, { key = "${rule.protocol}-${rule.from_port}-${rule.to_port}-${cidr}", cidr_block = cidr })
     ]
   ]) : r.key => r }
 
   egress_rules_flat = { for r in flatten([
-    for idx, rule in var.egress_rules : [
-      for cidr in rule.cidr_blocks : merge(rule, { key = "${idx}-${cidr}", cidr_block = cidr })
+    for rule in var.egress_rules : [
+      for cidr in rule.cidr_blocks : merge(rule, { key = "${rule.protocol}-${rule.from_port}-${rule.to_port}-${cidr}", cidr_block = cidr })
     ]
   ]) : r.key => r }
 }
