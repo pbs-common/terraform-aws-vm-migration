@@ -18,6 +18,8 @@ tags = {
   "repo"                    = "https://github.com/pbs-common/terraform-aws-vm-migration.git"
 }
 
-consuming_vpc_cidr_blocks = []
+# soc: 10.168.49.0/24, 10.168.70.0/24 (existing DCs). cchq: 10.68.50.0/24.
+# az (10.190.4.0/24, 10.191.4.0/24) excluded - not yet routed via the TGW.
+consuming_vpc_cidr_blocks = ["10.168.49.0/24", "10.168.70.0/24", "10.68.50.0/24"]
 
 key_name = null
