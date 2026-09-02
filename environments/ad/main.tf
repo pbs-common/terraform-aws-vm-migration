@@ -36,6 +36,18 @@ locals {
       cidr_blocks = [pair[1]]
     }
   ]
+
+  # Overflow SG rules, once the primary SG hits AWS's 60-rule limit.
+  overflow_ingress_rules_flat = { for r in flatten([
+    for pair in setproduct(local.ad_ports, var.overflow_cidr_blocks) : [{
+      key         = "${pair[0].protocol}-${pair[0].from_port}-${pair[0].to_port}-${pair[1]}"
+      description = "${pair[0].description} from ${pair[1]}"
+      from_port   = pair[0].from_port
+      to_port     = pair[0].to_port
+      protocol    = pair[0].protocol
+      cidr_block  = pair[1]
+    }]
+  ]) : r.key => r }
 }
 
 # Used only to resolve the VPC CIDR above.
@@ -54,6 +66,37 @@ data "aws_vpc" "this" {
   id = data.aws_subnet.sample.vpc_id
 }
 
+resource "aws_security_group" "ad_ports_overflow" {
+  count = length(var.overflow_cidr_blocks) > 0 ? 1 : 0
+
+  name        = "ad-ports-overflow-sg"
+  description = "Overflow AD port rules"
+  vpc_id      = data.aws_vpc.this.id
+
+  tags = merge(var.tags, { Name = "ad-ports-overflow-sg" })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "overflow" {
+  for_each = local.overflow_ingress_rules_flat
+
+  security_group_id = aws_security_group.ad_ports_overflow[0].id
+  description       = each.value.description
+  from_port         = each.value.from_port
+  to_port           = each.value.to_port
+  ip_protocol       = each.value.protocol
+  cidr_ipv4         = each.value.cidr_block
+
+  tags = merge(var.tags, { Name = "ad-ports-overflow-sg-ingress-${replace(each.key, "/", "_")}" })
+}
+
+locals {
+  overflow_sg_ids = length(var.overflow_cidr_blocks) > 0 ? [aws_security_group.ad_ports_overflow[0].id] : []
+}
+
 module "dc1" {
   source = "../../modules/ec2-windows-workload"
 
@@ -66,7 +109,8 @@ module "dc1" {
 
   root_volume_size = var.root_volume_size
 
-  ingress_rules = local.ad_ingress_rules
+  ingress_rules      = local.ad_ingress_rules
+  security_group_ids = local.overflow_sg_ids
 
   patch_group = "ad"
 
@@ -85,7 +129,8 @@ module "dc2" {
 
   root_volume_size = var.root_volume_size
 
-  ingress_rules = local.ad_ingress_rules
+  ingress_rules      = local.ad_ingress_rules
+  security_group_ids = local.overflow_sg_ids
 
   patch_group = "ad"
 
