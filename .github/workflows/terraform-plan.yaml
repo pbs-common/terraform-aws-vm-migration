@@ -40,6 +40,10 @@ on:
         type: string
         required: true
 
+      retention_days:
+        type: number
+        default: 7
+
     secrets:
       OIDC_ROLE_ARN:
         required: true
@@ -168,7 +172,7 @@ jobs:
         with:
           name: terraform-plan-${{ inputs.environment }}
           path: ${{ inputs.working_directory }}/tfplan
-          retention-days: 7
+          retention-days: ${{ inputs.retention_days }}
 
       - name: Fail on Plan Error
         if: steps.plan.outputs.exitcode == '1'
