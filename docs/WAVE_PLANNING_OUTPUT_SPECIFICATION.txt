@@ -1,0 +1,276 @@
+================================================================================
+WAVE PLANNING OUTPUT & HANDOFF SPECIFICATION
+================================================================================
+
+STORY: AWS Transform Migration Methodology Decision
+PURPOSE: Define what the wave planning stage produces and how it flows to the 
+         wave plan story for execution planning
+
+================================================================================
+WAVE PLANNING DELIVERABLES
+================================================================================
+
+Two CSV files are produced during Transform's "Wave Planning" phase:
+
+1. WAVE PLAN CSV
+   ├─ Format: CSV (Excel-compatible)
+   ├─ Columns:
+   │  • Application (name/identifier)
+   │  • Application Grouping (which servers belong together)
+   │  • Wave Assignment (which wave: Wave 1, 2, 3, 4, etc.)
+   │  • Wave Sequencing (order waves execute)
+   │  • Dependencies (identified relationships between applications)
+   │  • Any custom columns added during review
+   │
+   ├─ Important: Only rows with BOTH "application" AND "application wave" 
+   │            populated are included in the actual migration plan
+   │            (blank rows are dropped during processing)
+   │
+   └─ Source: Transform console → "Generate application groupings and waves" 
+             → "Download file"
+
+2. INVENTORY CSV
+   ├─ Format: CSV (Excel-compatible)
+   ├─ Columns:
+   │  • Hostname / Server
+   │  • Instance Type Recommendation (Transform's AI recommendation)
+   │  • Optimized Instance Type (alternative sizing)
+   │  • CPU/RAM/Storage specifications
+   │  • Pricing estimates
+   │
+   └─ Source: Transform console → "Confirm inventory" → "Download file"
+
+================================================================================
+WHAT TRANSFORM'S WAVE PLANNING DOES NOT EXPORT
+================================================================================
+
+⚠️ NOT included as explicit CSV columns (but DID inform the AI grouping logic):
+
+- Risk Level per application/wave (Transform uses risk internally to distribute 
+  complex apps across waves, but doesn't export a "risk_score" column)
+  → CUSTOMIZATION: Add your own risk rating column during review/refinement
+
+- Estimated Cutover Time per wave (Transform factors capacity constraints but 
+  doesn't provide explicit "cutover_minutes" estimates)
+  → CUSTOMIZATION: Add time estimates based on your team's historical data
+
+- Pre/Post-Migration Validation Steps (Transform doesn't generate test scripts 
+  or acceptance criteria)
+  → CUSTOMIZATION: Add validation requirements during review phase
+
+================================================================================
+THE REVIEW & REFINEMENT PROCESS
+================================================================================
+
+Step 1: Transform Produces Wave Plan
+   └─ CSV exported with default groupings and wave sequence
+
+Step 2: Download & Open in Excel
+   └─ Stakeholders review wave plan CSV + inventory CSV side-by-side
+
+Step 3: Business Validation & Customization (ALLOWED)
+   ├─ Verify application dependencies are correct
+   ├─ Check wave sequencing aligns with business priorities
+   │  (e.g., "run Wave 1 + 2 in parallel instead of sequential")
+   ├─ ADD CUSTOM COLUMNS:
+   │  • Risk Level (e.g., "Low", "Medium", "High")
+   │  • Estimated Cutover Time (minutes)
+   │  • Pre-Migration Validation (checklist/test ID)
+   │  • Post-Migration Validation (checklist/test ID)
+   │  • Owner Contact (who approves this wave)
+   │  • Dependencies on non-migrated systems
+   └─ Ensure ALL application rows are complete (no blanks in key fields)
+
+Step 4: Re-Upload Revised CSV
+   └─ Transform console → "Re-upload wave plan" → proceed to next gate
+
+Step 5: Approval Gate: "Review migration waves"
+   └─ AWS team administrator reviews + approves before execution begins
+
+================================================================================
+HANDOFF TO WAVE PLAN STORY
+================================================================================
+
+DELIVERABLES PRODUCED BY THIS STORY:
+
+1. Approved Wave Plan CSV (final version after review/customization)
+   ├─ Contains: application groupings, wave assignments, sequencing, dependencies
+   ├─ Enhanced with: risk levels, cutover times, validation steps, owner contacts
+   ├─ Status: Approved by [APPROVER ROLE - TBD]
+   └─ Location: [Shared repository/S3 bucket/OneDrive TBD]
+
+2. Approved Inventory CSV (instance-type recommendations)
+   ├─ Contains: hostname, recommended instance type, pricing, capacity
+   ├─ Status: Approved by [INVENTORY REVIEWER - TBD]
+   └─ Location: [Shared repository/S3 bucket/OneDrive TBD]
+
+3. Methodology Decision Document (this story)
+   ├─ Confirms: Transform "Discovery and server migration" scope
+   ├─ Confirms: Network/LZ suppression
+   ├─ Confirms: 2008 R2 prerequisites completed
+   ├─ Confirms: Approval gates passed
+   └─ Status: AWS team sign-off
+
+RECEIVING STORY (WAVE PLAN):
+
+The wave plan story receives:
+   → Approved CSV wave plan (with customizations)
+   → Approved CSV inventory (with instance types)
+   → Methodology decision document (confirming prerequisites)
+
+Wave plan story then:
+   → Converts CSV into detailed execution plan
+   → Creates Jira/project timeline for each wave
+   → Assigns cutover coordinators + validation owners
+   → Schedules test cutover windows
+   → Prepares rollback procedures per wave
+
+================================================================================
+APPROVAL CHAIN FOR WAVE PLANNING OUTPUT
+================================================================================
+
+WAVE PLAN REVIEWER (Confirm the wave plan)
+   Role: Murali Rajendran (mrajendran@pbs.org)
+   Responsibility:
+   ├─ Review application groupings for business logic accuracy
+   ├─ Validate wave sequencing aligns with business priorities
+   ├─ Verify dependencies are complete and correct
+   ├─ Add custom columns (risk, cutover time, validation steps)
+   ├─ Confirm all 2008 R2 prerequisites completed
+   └─ Approve re-upload before proceeding to next gate
+   
+   Success Criteria:
+   ├─ No blank rows in application/wave columns
+   ├─ All dependencies documented
+   ├─ Risk ratings assigned to complex applications
+   ├─ Cutover time estimates reasonable
+   └─ Owner contacts populated for each wave
+
+INVENTORY REVIEWER (Confirm inventory)
+   Role: [TBD - AWS team member or Infrastructure lead]
+   Responsibility:
+   ├─ Review instance-type recommendations for appropriateness
+   ├─ Validate pricing estimates are acceptable
+   ├─ Flag any undersized instances (consider upgrade)
+   ├─ Note 2008 R2 Nitro compatibility
+   └─ Approve before cost phase
+   
+   Success Criteria:
+   ├─ Instance types match application requirements
+   ├─ Pricing within budget constraints
+   ├─ No "unsupported" recommendations for 2008 R2 servers
+   └─ Capacity planning accounts for peak load
+
+WAVE PREP APPROVER (Review migration waves - final gate before execution)
+   Role: [TBD - AWS team administrator + Migration Lead]
+   Responsibility:
+   ├─ Final review of complete wave plan + inventory + dependencies
+   ├─ Confirm target account infrastructure ready
+   ├─ Confirm approver roles assigned for each wave
+   ├─ Approve release to wave plan story for execution
+   └─ Trigger start of "Migrate waves" phase
+   
+   Success Criteria:
+   ├─ All previous gates (wave plan + inventory) passed
+   ├─ Target account administrator confirmed ready
+   ├─ Cutover windows scheduled and communicated
+   ├─ Rollback procedures documented per wave
+   └─ All stakeholders briefed and trained
+
+================================================================================
+GATE 4 WORKFLOW: TRANSFORM → WAVE PLAN STORY
+================================================================================
+
+Transform Console Flow:
+
+   Wave Planning Complete
+        ↓
+   [Download Wave Plan CSV]
+        ↓
+   [Download Inventory CSV]
+        ↓
+   Review & Customize (Murali Rajendran + stakeholders)
+        ↓
+   [Re-upload Revised Wave Plan CSV]
+        ↓
+   GATE 4: "Review migration waves"
+        ↓
+   AWS Team Administrator Approval
+        ↓
+   [File export to Wave Plan Story location]
+        ↓
+   Wave Plan Story Receives Approved CSVs
+        ↓
+   Wave Plan Story Converts to Jira/Timeline
+
+================================================================================
+DATA INTEGRITY & COMPLETENESS
+================================================================================
+
+CRITICAL: Transform only includes rows in the actual migration if BOTH fields 
+are populated:
+   • Application (not blank)
+   • Application Wave (not blank)
+
+Before approval, verify:
+   ✓ All servers intended for migration have application name
+   ✓ All applications have a wave assignment (Wave 1, 2, 3, 4)
+   ✓ No unintended "blank rows" that would be dropped
+   ✓ All 30 Windows 2008 R2 servers are in the plan (check line count)
+
+If issues found:
+   → Edit CSV to add missing application/wave data
+   → Re-upload corrected version
+   → Transform re-validates on next gate attempt
+
+================================================================================
+CUSTOMIZATION EXAMPLES (ALLOWED)
+================================================================================
+
+Your team may add columns like:
+
+| Application | Wave | Risk Level | Cutover Time | Pre-Migration Test | Owner         |
+|-------------|------|------------|--------------|-------------------|---------------|
+| BizTalk     | W2   | High       | 45 minutes   | test_biztalk_01   | M.Rajendran   |
+| Alliant DB  | W1   | Medium     | 30 minutes   | test_alliant_db   | M.Rajendran   |
+| ScheduAll   | W3   | Low        | 20 minutes   | test_scheduall    | M.Rajendran   |
+
+This is ENCOURAGED — it makes the wave plan executable and reduces rework.
+
+================================================================================
+TIMELINE & DATES
+================================================================================
+
+Wave Planning Phase (Transform):
+   └─ Duration: Depends on complexity (estimate 2-5 business days)
+
+Approval Gates (this story):
+   └─ Wave Plan Review: 1-2 days
+   └─ Inventory Review: 1 day
+   └─ Wave Prep Approval: 1 day
+
+Handoff to Wave Plan Story:
+   └─ Expected delivery: End of Gate 4 approval
+   └─ Wave plan story begins: Next business day
+
+================================================================================
+SUMMARY: WHAT FLOWS DOWNSTREAM
+================================================================================
+
+FROM: Methodology Decision Story (THIS WORK)
+TO: Wave Plan Story (NEXT WORK)
+
+DELIVERS:
+   ✓ Wave Plan CSV (approved, customized)
+   ✓ Inventory CSV (approved)
+   ✓ Methodology decision document (prerequisites confirmed)
+   ✓ Approval sign-offs (all gates cleared)
+
+WAVE PLAN STORY RECEIVES AND:
+   ✓ Converts CSVs to project timeline
+   ✓ Creates Jira epics/tickets per wave
+   ✓ Schedules cutover windows
+   ✓ Assigns execution teams
+   ✓ Prepares runbooks + validation scripts
+
+================================================================================
