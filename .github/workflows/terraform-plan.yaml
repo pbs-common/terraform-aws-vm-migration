@@ -124,7 +124,7 @@ jobs:
         id: plan
         run: |
           terraform plan \
-            --var-file ${{ inputs.environment }}.tfvars \
+            --var-file ${{ inputs.environment }}/${{ inputs.environment }}.tfvars \
             -no-color \
             -input=false \
             -out=tfplan \
