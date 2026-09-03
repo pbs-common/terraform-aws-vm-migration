@@ -89,6 +89,6 @@ jobs:
       - name: Terraform Destroy
         run: |
           terraform destroy \
-            --var-file ${{ inputs.environment }}/${{ inputs.environment }}.tfvars \
+            --var-file ${{ inputs.environment }}.tfvars \
             -auto-approve \
             -input=false
