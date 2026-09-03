@@ -1,6 +1,8 @@
 name: Example Deploy Workflow (Using Reusable Workflows)
 
 on:
+  workflow_dispatch:
+
   push:
     branches:
       - main
