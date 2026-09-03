@@ -93,4 +93,4 @@ jobs:
           TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
 
       - name: Terraform Apply
-        run: terraform apply tfplan -input=false
+        run: terraform apply -input=false tfplan
