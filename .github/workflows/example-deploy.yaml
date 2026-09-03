@@ -25,7 +25,7 @@ jobs:
       terraform_version: "1.16.0"
       tflint_version: "0.64.0"
       aws_region: us-east-1
-      working_directory: environments
+      working_directory: environments/ad
       environment: ad
       s3_backend_bucket: pbs-ad-ds-terraform-state
       s3_backend_key: ad/terraform.tfstate
@@ -45,7 +45,7 @@ jobs:
     with:
       terraform_version: "1.16.0"
       aws_region: us-east-1
-      working_directory: environments
+      working_directory: environments/ad
       environment: ad
       s3_backend_bucket: pbs-ad-ds-terraform-state
       s3_backend_key: ad/terraform.tfstate

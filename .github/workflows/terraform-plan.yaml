@@ -74,7 +74,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v6.2.3
@@ -93,7 +93,7 @@ jobs:
           tflint --format compact
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@v4
         with:
           terraform_version: ${{ inputs.terraform_version }}
 
@@ -124,7 +124,7 @@ jobs:
         id: plan
         run: |
           terraform plan \
-            --var-file ${{ inputs.environment }}/${{ inputs.environment }}.tfvars \
+            --var-file ${{ inputs.environment }}.tfvars \
             -no-color \
             -input=false \
             -out=tfplan \
@@ -168,7 +168,7 @@ jobs:
 
       - name: Upload Terraform Plan Artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: terraform-plan-${{ inputs.environment }}
           path: ${{ inputs.working_directory }}/tfplan
