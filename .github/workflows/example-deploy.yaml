@@ -1,0 +1,88 @@
+name: Example Deploy Workflow (Using Reusable Workflows)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+      - '.github/workflows/example-deploy.yaml'
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'terraform/**'
+
+jobs:
+  # Step 1: Plan Terraform changes
+  plan-dev:
+    name: Plan Dev Environment
+    uses: ./.github/workflows/terraform-plan.yaml
+    with:
+      terraform_version: "1.16.0"
+      tflint_version: "0.45.0"
+      aws_region: us-east-1
+      working_directory: terraform
+      environment: dev
+      s3_backend_bucket: my-terraform-state-bucket  # Replace with your bucket
+      s3_backend_key: terraform/dev/terraform.tfstate  # Replace with your key pattern
+      post_pr_comment: true
+    secrets:
+      OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
+      TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
+
+  # Step 2: Apply the plan (only on main branch after approval)
+  #         Requires plan artifact from plan-dev job
+  apply-dev:
+    name: Apply Dev Environment
+    needs: plan-dev
+    uses: ./.github/workflows/terraform-apply.yaml
+    # Only apply on main branch (not on PRs)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    with:
+      terraform_version: "1.16.0"
+      aws_region: us-east-1
+      working_directory: terraform
+      environment: dev
+      s3_backend_bucket: my-terraform-state-bucket  # Replace with your bucket
+      s3_backend_key: terraform/dev/terraform.tfstate  # Replace with your key pattern
+    secrets:
+      OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
+      TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
+
+  # Example: Plan staging environment
+  plan-staging:
+    name: Plan Staging Environment
+    uses: ./.github/workflows/terraform-plan.yaml
+    with:
+      terraform_version: "1.16.0"
+      tflint_version: "0.45.0"
+      aws_region: us-east-1
+      working_directory: terraform
+      environment: staging
+      s3_backend_bucket: my-terraform-state-bucket  # Replace with your bucket
+      s3_backend_key: terraform/staging/terraform.tfstate
+      post_pr_comment: true
+    secrets:
+      OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
+      TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
+
+  # Example: Plan prod environment (manual approval may be recommended)
+  plan-prod:
+    name: Plan Prod Environment
+    uses: ./.github/workflows/terraform-plan.yaml
+    # Optionally: only run on main branch
+    # if: github.ref == 'refs/heads/main'
+    with:
+      terraform_version: "1.16.0"
+      tflint_version: "0.45.0"
+      aws_region: us-east-1
+      working_directory: terraform
+      environment: prod
+      s3_backend_bucket: my-terraform-state-bucket  # Replace with your bucket
+      s3_backend_key: terraform/prod/terraform.tfstate
+      post_pr_comment: true
+    secrets:
+      OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
+      TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
