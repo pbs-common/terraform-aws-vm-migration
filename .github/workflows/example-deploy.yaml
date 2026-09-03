@@ -21,7 +21,7 @@ jobs:
     uses: ./.github/workflows/terraform-plan.yaml
     with:
       terraform_version: "1.16.0"
-      tflint_version: "0.45.0"
+      : "0.45.0"
       aws_region: us-east-1
       working_directory: environments
       environment: ad
