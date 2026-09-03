@@ -83,7 +83,7 @@ jobs:
           aws-region: ${{ inputs.aws_region }}
 
       - name: Setup TFLint
-        uses: terraform-linters/setup-tflintv6.2.3
+        uses: terraform-linters/setup-tflint@v4
         with:
           tflint_version: ${{ inputs.tflint_version }}
 
