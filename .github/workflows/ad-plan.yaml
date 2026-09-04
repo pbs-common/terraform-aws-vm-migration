@@ -1,20 +1,64 @@
 name: AD Environment Plan
 
 on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+
   pull_request:
     paths:
       - "environments/ad/**"
       - "modules/ec2-windows-workload/**"
-  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
 
 jobs:
-  plan:
-    uses: ./.github/workflows/terraform-plan.yaml
+  # Step 1: Validate Terraform format
+  validate-ad:
+    name: Validate Format
+    uses: ./.github/workflows/terraform-validate.yaml@main
     with:
+      terraform_version: "1.16.0"
+      working_directory: environments/ad
+
+  # Step 2: Plan Terraform changes
+  plan-ad:
+    name: Plan AD Environment
+    needs: validate-ad
+    uses: ./.github/workflows/terraform-plan.yaml@main
+    with:
+      terraform_version: "1.16.0"
+      tflint_version: "0.64.0"
       aws_region: us-east-1
       working_directory: environments/ad
       environment: ad
-      s3_backend_bucket: ${{ vars.AD_TF_STATE_BUCKET }}
+      s3_backend_bucket: pbs-ad-ds-terraform-state
+      s3_backend_key: ad/terraform.tfstate
+      post_pr_comment: true
+    secrets:
+      OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
+      TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
+
+  # Step 3: Apply the plan (only on main branch after approval)
+  #         Requires plan artifact from plan-ad job
+  apply-ad:
+    name: Apply AD Environment
+    needs: plan-ad
+    uses: ./.github/workflows/terraform-apply.yaml@main
+    # Only apply on main branch (not on PRs)
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    with:
+      terraform_version: "1.16.0"
+      aws_region: us-east-1
+      working_directory: environments/ad
+      environment: ad
+      s3_backend_bucket: pbs-ad-ds-terraform-state
       s3_backend_key: ad/terraform.tfstate
     secrets:
       OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
