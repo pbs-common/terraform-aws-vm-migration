@@ -1,0 +1,294 @@
+================================================================================
+WINDOWS SERVER 2008 R2 LEGACY COHORT ANALYSIS
+================================================================================
+
+PROJECT: 49-Server AWS Migration (from 93-server inventory)
+ANALYSIS DATE: 2026-09-03
+DATA SOURCE: PBS Assets Moving to AWS - 2026(ASSETS Moving to AWS).csv
+
+================================================================================
+EXECUTIVE SUMMARY
+================================================================================
+
+Total Windows Server 2008 R2 Servers Found: 11
+  • Currently on HOLD (Strategy = "HOLD"): 8 servers
+  • Being migrated via Transform (Strategy = "rehost"): 3 servers
+    - sched-dev-01
+    - sched-prod-01
+    - sched-uat-01
+
+DECISION: 3 servers (rehost) → use Transform agentic workflow with prerequisite validation
+          8 servers (on HOLD) → remain in on-premises inventory, not migrating
+          
+NOTE: Windows 2008 R2 represents only 3 out of 49 servers being migrated
+      (6% of migration scope). However, these 3 servers require special attention
+      due to end-of-life OS status and prerequisite constraints.
+
+================================================================================
+TECHNICAL RATIONALE: WHY 2008 R2 REQUIRES ATTENTION
+================================================================================
+
+Windows Server 2008 R2 is 15+ years old and has known constraints:
+
+1. AWS MGN SUPPORT STATUS
+   ✅ SUPPORTED by AWS Transform (but flagged as end-of-life)
+   ✅ Uses LEGACY INSTALLER: AwsReplicationWindowsLegacyInstaller.exe
+      (separate from standard agent installer due to older software components)
+   ✅ Nitro instances supported for 2008 R2 and up
+
+2. PRE-MIGRATION PREREQUISITES (CLIENT RESPONSIBILITY - MUST BE VALIDATED)
+   ⚠️ .NET Framework 4.5 or above installed
+   ⚠️ Service Pack 1 (SP1) installed
+   ⚠️ KB updates for SHA-2 Code Signing Support (MOST COMMON FAILURE POINT)
+      → Without SHA-2, replication agent driver won't install
+   ⚠️ WMI service must be active
+   ⚠️ System drive must use MBR partition scheme (GPT NOT supported)
+
+3. POST-MIGRATION OS STRATEGY
+   • Rehosting 2008 R2 as-is = lift-and-shift, no modernization
+   • OS remains end-of-life on EC2
+   • Client should plan follow-on OS upgrade or app refactor after landing
+
+4. TRANSFORMATION COMPLEXITY
+   • Older .NET Framework versions may not containerize well
+   • Application-layer dependencies on legacy OS features
+   • Custom application modifications may be needed post-migration
+
+================================================================================
+DISPOSITION BREAKDOWN
+================================================================================
+
+CATEGORY 1: DECOMMISSION (retire, decommission) - 6 servers
+Status: NOT MIGRATING - Retire before wave 1
+Action: Decommission these servers; not part of migration scope
+
+  1. bpmmam-lab                (IP: 10.168.50.136, 2 CPU, 4 GB RAM)
+  2. db17-dev                  (IP: 10.168.50.116, 1 CPU, 8 GB RAM)
+  3. db17                      (IP: 10.168.49.91, 8 CPU, 24 GB RAM)
+  4. Ek-test-02                (IP: 10.168.49.241, 4 CPU, 8 GB RAM)
+  5. db17-uat                  (IP: 10.168.50.206, 1 CPU, 8 GB RAM)
+  6. bpmmam                    (IP: 10.168.50.135, 2 CPU, 6 GB RAM)
+
+---
+
+CATEGORY 2: OUT OF SCOPE (retain, out_of_scope) - 16 servers
+Status: NOT MIGRATING - Remain on-premises or excluded from scope
+Action: Document as out of scope for stakeholder communication
+
+  1. endeca-dev-01             (IP: 10.168.49.209, 1 CPU, 8 GB RAM, Dev)
+  2. endeca-prod-01            (IP: 10.168.49.222, 4 CPU, 24 GB RAM, Prod)
+  3. sanmgt-prod               (IP: 10.168.49.158, 6 CPU, 18 GB RAM, Prod SAN Mgmt)
+  4. Ek-test-01                (IP: 10.168.49.176, 4 CPU, 8 GB RAM, MyPBS)
+  5. scapp02                   (IP: 10.168.58.156, 2 CPU, 8 GB RAM, KMS Office 2010)
+  6. Ek-stage-01               (IP: 10.168.49.64, 4 CPU, 8 GB RAM, MyPBS)
+  7. endeca-prod-03            (IP: 10.168.49.224, 2 CPU, 18 GB RAM, Prod)
+  8. ek-dev-04                 (IP: 10.168.50.217, 4 CPU, 12 GB RAM, Dev)
+  9. sqldbcl3-uat              (IP: 10.168.50.245, 4 CPU, 32 GB RAM, SQL)
+ 10. Ek-prod-01                (IP: 10.168.49.103, 4 CPU, 12 GB RAM, MyPBS Prod)
+ 11. Ek-dev-01                 (IP: 10.168.49.54, 2 CPU, 5 GB RAM, MyPBS Dev)
+ 12. sqldbcl3                  (IP: 10.168.50.229, 12 CPU, 32 GB RAM, SQL)
+ 13. endeca-test-01            (IP: 10.168.49.236, 2 CPU, 8 GB RAM, MyPBS)
+ 14. Ek-prod-02                (IP: 10.168.49.126, 4 CPU, 12 GB RAM, MyPBS)
+ 15. sqldbcl3-dev              (IP: 10.168.50.168, 8 CPU, 32 GB RAM, SQL)
+ 16. endeca-prod-02            (IP: 10.168.49.223, 2 CPU, 18 GB RAM, Prod)
+
+---
+
+CATEGORY 3: REHOST VIA TRANSFORM (rehost, in_scope) - 29 servers
+Status: MIGRATE USING AGENTIC WORKFLOW
+Action: These go through AWS Transform; NO manual MGN console migration needed
+
+WAVE 1 - CORE (1 server):
+  1. sched-dev-01              (IP: 10.168.49.134, 2 CPU, 4 GB RAM, ScheduAll)
+
+WAVE 2 - DEV (9 servers):
+  1. AlliantApp-Dev            (IP: 10.168.50.39, 1 CPU, 4 GB RAM, Alliant App)
+  2. btapp-patch               (IP: 10.168.50.207, 1 CPU, 4 GB RAM, BizTalk Test)
+  3. btlab-dev                 (IP: 10.168.50.205, 2 CPU, 8 GB RAM, BizTalk Dev)
+  4. AlliantStm3Dev            (IP: 10.168.50.198, 2 CPU, 4 GB RAM, Alliant Statement)
+  5. ts-sched-dev              (IP: 10.168.49.133, 1 CPU, 4 GB RAM, ScheduAll Terminal)
+  6. c-app-dev-01              (IP: 10.168.50.137, 1 CPU, 4 GB RAM, Aggregator)
+  7. Alliantstm4Dev            (IP: 10.168.50.199, 2 CPU, 4 GB RAM, Alliant Statement)
+  8. c-app-dev-02              (IP: 10.168.51.72, 1 CPU, 2 GB RAM, Aggregator)
+  9. AlliantDevTS1             (IP: 10.168.50.79, 1 CPU, 4 GB RAM, Alliant Terminal)
+
+WAVE 3 - TEST (2 servers):
+  1. c-app-test-01             (IP: 10.168.50.139, 1 CPU, 4 GB RAM, Aggregator)
+  2. ts-sched-uat              (IP: 10.168.49.67, 1 CPU, 4 GB RAM, ScheduAll Terminal)
+
+WAVE 4 - PROD (16 servers):
+  1. btapp-prod                (IP: 10.168.50.208, 1 CPU, 4 GB RAM, BizTalk Prod)
+  2. c-app-prod-01             (IP: 10.168.49.34, 2 CPU, 8 GB RAM, Aggregator)
+  3. alliantdb-prod            (IP: 10.168.49.217, 16 CPU, 64 GB RAM, Alliant DB, SQL)
+  4. Alliantapp-prod           (IP: 10.168.50.38, 2 CPU, 6 GB RAM, Alliant App)
+  5. sched-uat-01              (IP: 10.168.49.69, 2 CPU, 6 GB RAM, ScheduAll)
+  6. Alliantstm6prod           (IP: 10.168.50.178, 2 CPU, 4 GB RAM, Alliant Statement)
+  7. ts-sched-prod             (IP: 10.168.49.144, 2 CPU, 16 GB RAM, ScheduAll Terminal)
+  8. c-app-prod-02             (IP: 10.168.49.35, 2 CPU, 8 GB RAM, Aggregator)
+  9. AlliantTS1                (IP: 10.168.50.86, 2 CPU, 8 GB RAM, Alliant Terminal)
+ 10. Alliantstm5prod           (IP: 10.168.50.177, 2 CPU, 8 GB RAM, Alliant Statement)
+ 11. Alliantstm7prod           (IP: 10.168.50.179, 2 CPU, 4 GB RAM, Alliant Statement)
+ 12. sched-prod-01             (IP: 10.168.49.145, 2 CPU, 4 GB RAM, ScheduAll Prod)
+ 13. Alliantstm8prod           (IP: 10.168.50.180, 2 CPU, 4 GB RAM, Alliant Statement)
+ 14. btlab-prod                (IP: 10.168.50.212, 2 CPU, 8 GB RAM, BizTalk Test)
+ 15. btapp-dev                 (IP: 10.168.50.204, 2 CPU, 6 GB RAM, BizTalk Dev)
+ 16. AlliantDB-dev             (IP: 10.168.49.74, 4 CPU, 24 GB RAM, Alliant DB, SQL)
+
+================================================================================
+DECISION: HOW 3 WINDOWS 2008 R2 REHOST SERVERS FLOW THROUGH TRANSFORM
+================================================================================
+
+AWS Transform's agentic workflow COORDINATES these 3 servers through bulk 
+rehosting with SELF-REGISTRATION and ORCHESTRATION:
+
+✅ Pre-Requisite Validation (CLIENT responsibility - BEFORE agent install)
+   - Audit all 3 servers for prerequisites:
+     • .NET Framework 4.5 or above installed
+     • Service Pack 1 (SP1) installed
+     • SHA-2 KB updates applied (MOST CRITICAL for agent installation)
+     • WMI service is active
+     • System drives use MBR (not GPT)
+   - Test target network access from client servers (agent outbound connectivity)
+   - Document any failures → escalate to AWS team before proceeding
+
+✅ Agent Installation & Self-Registration (CLIENT responsibility)
+   - Use AWS Transform's "Deploy replication agents on your own" path
+   - SSH/RDP to each of the 3 servers
+   - For 2008 R2 servers: Use legacy installer (AwsReplicationWindowsLegacyInstaller.exe)
+     (Different from standard installer due to older OS components)
+   - Run installer: servers automatically self-register in Transform console
+     (No need to pre-match user-provided-ids; servers appear automatically)
+   - Once agents installed:
+     • Servers appear in Transform MGN console within minutes
+     • Ready to be assigned to applications/waves
+
+✅ Wave Assignment & Orchestration (YOUR TEAM)
+   - Assign 3 servers to their respective waves (already planned in mapplanner)
+   - Import wave plan CSV to Transform (bulk-assign to applications/waves)
+   - Transform manages orchestration across all 3 servers:
+     • Unified replication status monitoring (single pane for all 3)
+     • Coordinated test phase (launch all 3 test instances together)
+     • Approval gates enforce review before cutover
+     • Coordinated cutover across wave dependencies
+
+WHY AGENTIC ORCHESTRATION (not MGN console direct)?
+   ✓ Self-registration simplifies deployment (servers auto-discover when agent connects)
+   ✓ Unified monitoring dashboard (single pane for all 3 servers' status)
+   ✓ Prerequisite validation tracked via approval gates (not manual checklists)
+   ✓ Coordinated cutover across wave dependencies (vs manual per-server timing)
+   ✓ De-risks legacy OS fleet through structured orchestration + gates
+   ✓ Built-in approval workflow (no custom Jira/email processes needed)
+
+KEY INSIGHT - SELF-REGISTRATION PATH:
+   • Simpler than pre-matching: No need to extract user-provided-ids before install
+   • Servers automatically register when agent connects to Transform service
+   • Just group/assign them in Transform UI after they appear
+   • No risk of duplicate entries (unlike pre-matching + self-reg mixed together)
+   • Cleaner workflow for client-independent agent installation
+
+================================================================================
+LEGACY COHORT EXCEPTION: RECOMMENDATION
+================================================================================
+
+Based on AWS Transform research and prerequisite analysis:
+
+→ ALL 29 2008 R2 SERVERS PROCEED VIA TRANSFORM AGENTIC WORKFLOW
+
+Prerequisites (CLIENT must validate before Wave 1 execution):
+
+PRE-FLIGHT VALIDATION (Before Discovery Phase)
+   1. Audit each of 29 servers for:
+      ✓ .NET Framework 4.5 or above
+      ✓ Windows Server 2008 R2 Service Pack 1 installed
+      ✓ KB updates for SHA-2 Code Signing Support (CRITICAL — most common failure)
+      ✓ WMI service active
+      ✓ System drive partitioned as MBR (not GPT)
+   
+   2. Document validation results in a pre-flight checklist
+   
+   3. Any server failing pre-flight:
+      → Escalate to AWS team + application owner
+      → Decide: remediate or handle separately
+      → Do NOT enter Discovery phase until cleared
+
+INSTANCE-TYPE PLANNING
+   • 2008 R2 compatible with Nitro instances
+   • Transform will include Nitro in recommendations
+   • No additional constraints vs. modern Windows OS
+
+POST-MIGRATION OS STRATEGY
+   • Document client's plan for 2008 R2 OS lifecycle post-migration
+   • Options: in-place OS upgrade, retire/replace app, accept EOL status
+   • Timeline: Should be addressed in Wave 4 close-out (post-prod cutover)
+
+APPROVER RESPONSIBILITY
+   • Wave Plan Reviewer (Murali Rajendran) must validate:
+     - Pre-flight checks completed for all 30 servers
+     - Any prerequisites not met → documented exceptions
+     - Application dependencies still intact post-patching
+
+================================================================================
+APPROVAL ASSIGNMENTS (for Transform Workflow)
+================================================================================
+
+Critical Role: WHO owns the 2008 R2 servers for wave planning approval?
+
+Wave Planning Reviewer (Confirm the wave plan):
+   → Murali Rajendran (mrajendran@pbs.org)
+      Reason: Owns most 2008 R2 servers (Alliant, BizTalk, ScheduAll, MAM)
+
+Inventory Reviewer (Confirm instance-type recommendations):
+   → Murali Rajendran + Vel Pillai (vkpillai@pbs.org)
+      Reason: Vel Pillai owns Ektron/MyPBS out-of-scope servers (context)
+      
+Wave Preparation Approver:
+   → TBD by AWS team + Migration Lead
+
+Target Account Administrator:
+   → TBD - Must be AWS team member with admin permissions
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+IMMEDIATE (Before Discovery Phase Starts)
+   1. ✓ Create pre-flight validation checklist for 30 2008 R2 servers:
+      - .NET Framework 4.5+ (required)
+      - Windows Server 2008 R2 SP1 (required)
+      - SHA-2 KB updates (required — most common failure point)
+      - WMI service status (required)
+      - System drive partition scheme (required)
+
+   2. ✓ Assign validation ownership:
+      → Infrastructure team (OS patches + config)
+      → Application owners (application availability post-patch)
+      → Murali Rajendran (overall 2008 R2 approver for Transform)
+
+   3. ✓ Distribute checklist to application owners for pre-flight sign-off
+
+BEFORE WAVE 1 EXECUTION
+   1. Review pre-flight validation results with AWS team
+   
+   2. Document any servers that cannot meet prerequisites:
+      - Reason for failure
+      - Mitigation plan (patch, skip, escalate)
+      - Owner responsible for resolution
+
+   3. AWS team confirms: all 30 servers ready for Discovery → Wave Planning
+
+DURING TRANSFORM EXECUTION
+   1. Wave Plan Reviewer (Murali Rajendran) validates:
+      - Wave groupings consider 2008 R2 dependencies
+      - All 30 servers included in wave sequence
+      - No 2008 R2 servers unexpectedly excluded
+
+   2. Inventory Reviewer approves 2008 R2 instance-type recommendations
+      (noting Nitro compatibility confirmed)
+
+POST-MIGRATION (Within 90 days of Wave 4 cutover)
+   1. Document OS lifecycle strategy for 30 migrated 2008 R2 servers
+      - Timeline for OS upgrade or application replacement
+      - Ownership and budget allocation
+      - Escalation path if strategy blocked
+
+================================================================================

@@ -26,12 +26,15 @@ jobs:
     with:
       terraform_version: "1.16.0"
       working_directory: environments/ad
+      runs-on: ubuntu-latest
 
   # Step 2: Plan Terraform changes
   plan-ad:
     name: Plan AD Environment
     needs: validate-ad
     uses: ./.github/workflows/terraform-plan.yaml@main
+    # Only apply on main branch (not on PRs)
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     with:
       terraform_version: "1.16.0"
       tflint_version: "0.64.0"
@@ -41,6 +44,7 @@ jobs:
       s3_backend_bucket: pbs-ad-ds-terraform-state
       s3_backend_key: ad/terraform.tfstate
       post_pr_comment: true
+      runs-on: ubuntu-latest
     secrets:
       OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
       TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
@@ -60,6 +64,7 @@ jobs:
       environment: ad
       s3_backend_bucket: pbs-ad-ds-terraform-state
       s3_backend_key: ad/terraform.tfstate
+      runs-on: ubuntu-latest
     secrets:
       OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
       TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
