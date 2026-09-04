@@ -19,6 +19,8 @@ locals {
     { description = "LDAP GC (TCP)", from_port = 3268, to_port = 3268, protocol = "tcp" },
     { description = "LDAPS GC (TCP)", from_port = 3269, to_port = 3269, protocol = "tcp" },
     { description = "RPC dynamic port range (TCP)", from_port = 49152, to_port = 65535, protocol = "tcp" },
+    { description = "RDP", from_port = 3389, to_port = 3389, protocol = "tcp" },
+    { description = "ICMP", from_port = -1, to_port = -1, protocol = "icmp" }
   ]
 
   # VPC CIDR covers DC1<->DC2 replication; consuming VPCs get the same ports.
