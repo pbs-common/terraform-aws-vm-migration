@@ -1,4 +1,4 @@
-name: Example Deploy Workflow (Using Reusable Workflows)
+name: AD Environment Plan
 
 on:
   workflow_dispatch:
@@ -6,21 +6,35 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'environments/**'
-      - '.github/workflows/example-deploy.yaml'
 
   pull_request:
-    branches:
-      - main
     paths:
-      - 'environments/**'
+      - "environments/ad/**"
+      - "modules/ec2-windows-workload/**"
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
 
 jobs:
-  # Step 1: Plan Terraform changes (AD environment only)
+  # Step 1: Validate Terraform format
+  validate-ad:
+    name: Validate Format
+    uses: ./.github/workflows/terraform-validate.yaml@main
+    with:
+      terraform_version: "1.16.0"
+      working_directory: environments/ad
+      runs-on: ubuntu-latest
+
+  # Step 2: Plan Terraform changes
   plan-ad:
     name: Plan AD Environment
-    uses: ./.github/workflows/terraform-plan.yaml
+    needs: validate-ad
+    uses: ./.github/workflows/terraform-plan.yaml@main
+    # Only apply on main branch (not on PRs)
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     with:
       terraform_version: "1.16.0"
       tflint_version: "0.64.0"
@@ -30,16 +44,17 @@ jobs:
       s3_backend_bucket: pbs-ad-ds-terraform-state
       s3_backend_key: ad/terraform.tfstate
       post_pr_comment: true
+      runs-on: ubuntu-latest
     secrets:
       OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
       TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
 
-  # Step 2: Apply the plan (only on main branch after approval)
+  # Step 3: Apply the plan (only on main branch after approval)
   #         Requires plan artifact from plan-ad job
   apply-ad:
     name: Apply AD Environment
     needs: plan-ad
-    uses: ./.github/workflows/terraform-apply.yaml
+    uses: ./.github/workflows/terraform-apply.yaml@main
     # Only apply on main branch (not on PRs)
     if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     with:
@@ -49,6 +64,7 @@ jobs:
       environment: ad
       s3_backend_bucket: pbs-ad-ds-terraform-state
       s3_backend_key: ad/terraform.tfstate
+      runs-on: ubuntu-latest
     secrets:
       OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
       TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
