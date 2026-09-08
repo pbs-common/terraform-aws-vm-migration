@@ -26,21 +26,17 @@ overflow_cidr_blocks = ["10.190.4.0/24", "10.191.4.0/24"]
 
 key_name = null
 
-environment_name               = "ad"
-mgn_staging_az                 = "us-east-1a"
-mgn_staging_subnet_cidr        = "10.0.100.0/24"
+# MGN Configuration
+environment_name            = "ad"
+mgn_staging_az              = "us-east-1a"
+mgn_staging_subnet_cidr     = "10.0.100.0/24"
+mgn_source_vpc_cidr_blocks  = ["10.0.0.0/8"]
+mgn_target_vpc_cidr_blocks  = ["172.31.0.0/16"]
+mgn_cross_account_role_arns = []
+enable_mgn_ebs_encryption   = true
+mgn_kms_key_arn             = null
 
-mgn_source_vpc_cidr_blocks     = ["10.0.0.0/8"]      # Your on-prem network
-mgn_target_vpc_cidr_blocks     = ["172.31.0.0/16"]     # Target VPC CIDR
-
-# Cross-account replication (leave empty for now, add later if needed)
-mgn_cross_account_role_arns    = []
-
-# Encryption
-enable_mgn_ebs_encryption      = true
-mgn_kms_key_arn               = null  # Uses AWS managed key
-
-# Tags (merge with your existing tags)
+# Common tags for MGN resources
 common_tags = {
   "map-migrated"            = "mig5T578AWUOW"
   "pbs:billing:environment" = "ad"
