@@ -119,6 +119,15 @@ module "dc1" {
   tags = var.tags
 }
 
+module "ssm_session_access" {
+  source = "../../modules/ssm-session-access-policy"
+
+  name = "pbs-ssm-session-access-policy"
+  tags = {
+    "map-migrated" = "mig5T578AWUOW"
+  }
+}
+
 module "dc2" {
   source = "../../modules/ec2-windows-workload"
 
