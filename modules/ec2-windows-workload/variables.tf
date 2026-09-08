@@ -91,15 +91,15 @@ variable "egress_rules" {
 # IAM / SSM
 
 variable "create_iam_instance_profile" {
-  description = "Whether to create a module-managed IAM role instead of attaching the org's shared pbs-ssm-role."
+  description = "Whether to create a per-instance IAM role with SSM access, seeded with the same permissions as the org's shared pbs-ssm-role. Set false to attach an existing instance profile instead."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "iam_instance_profile_name" {
-  description = "Existing IAM instance profile to attach. Ignored if create_iam_instance_profile is true."
+  description = "Existing IAM instance profile to attach instead of creating one. Required if create_iam_instance_profile is false."
   type        = string
-  default     = "pbs-ssm-role"
+  default     = null
 }
 
 variable "additional_iam_policy_arns" {
