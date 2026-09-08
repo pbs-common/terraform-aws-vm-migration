@@ -33,6 +33,7 @@ resource "aws_subnet" "mgn_staging" {
 
 # Internet Gateway for replication agent outbound access
 resource "aws_internet_gateway" "mgn" {
+  count  = var.create_internet_gateway ? 1 : 0
   vpc_id = var.vpc_id
 
   tags = merge(
@@ -47,7 +48,7 @@ resource "aws_route_table" "mgn_staging" {
 
   route {
     cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.mgn.id
+    gateway_id = var.create_internet_gateway ? aws_internet_gateway.mgn[0].id : var.internet_gateway_id
   }
 
   tags = merge(

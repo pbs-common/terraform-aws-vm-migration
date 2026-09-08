@@ -6,6 +6,14 @@ data "aws_vpc" "default" {
   default = true
 }
 
+# Get the existing Internet Gateway from the default VPC
+data "aws_internet_gateway" "default" {
+  filter {
+    name   = "attachment.vpc-id"
+    values = [data.aws_vpc.default.id]
+  }
+}
+
 # Deploy MGN replication baseline
 module "mgn_replication_baseline" {
   source = "../../modules/mgn-replication-baseline"
@@ -18,6 +26,8 @@ module "mgn_replication_baseline" {
   source_vpc_cidr_blocks      = var.mgn_source_vpc_cidr_blocks
   target_vpc_cidr_blocks      = var.mgn_target_vpc_cidr_blocks
   cross_account_mgn_role_arns = var.mgn_cross_account_role_arns
+  create_internet_gateway     = false
+  internet_gateway_id         = data.aws_internet_gateway.default.id
   enable_ebs_encryption       = var.enable_mgn_ebs_encryption
   kms_key_arn                 = var.mgn_kms_key_arn
 

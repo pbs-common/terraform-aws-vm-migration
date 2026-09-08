@@ -55,7 +55,7 @@ output "mgn_replication_settings_parameter_name" {
 
 output "internet_gateway_id" {
   description = "ID of the internet gateway for staging subnet outbound access"
-  value       = aws_internet_gateway.mgn.id
+  value       = var.create_internet_gateway ? aws_internet_gateway.mgn[0].id : var.internet_gateway_id
 }
 
 output "route_table_id" {

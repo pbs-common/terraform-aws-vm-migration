@@ -24,6 +24,18 @@ variable "staging_az" {
   type        = string
 }
 
+variable "create_internet_gateway" {
+  description = "Whether to create a new Internet Gateway (set to false if VPC already has one)"
+  type        = bool
+  default     = true
+}
+
+variable "internet_gateway_id" {
+  description = "Existing Internet Gateway ID to use (if create_internet_gateway is false)"
+  type        = string
+  default     = null
+}
+
 variable "source_vpc_cidr_blocks" {
   description = "CIDR blocks of source VPCs/on-prem networks for replication traffic"
   type        = list(string)

@@ -29,7 +29,7 @@ key_name = null
 # MGN Configuration
 environment_name            = "ad"
 mgn_staging_az              = "us-east-1a"
-mgn_staging_subnet_cidr     = "10.0.100.0/24"
+mgn_staging_subnet_cidr     = "172.31.100.0/24"
 mgn_source_vpc_cidr_blocks  = ["10.0.0.0/8"]
 mgn_target_vpc_cidr_blocks  = ["172.31.0.0/16"]
 mgn_cross_account_role_arns = []
