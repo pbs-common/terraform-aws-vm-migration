@@ -18,13 +18,13 @@ variable "mgn_staging_az" {
 }
 
 variable "mgn_create_internet_gateway" {
-  description = "Whether to create a new Internet Gateway (set to false if VPC already has one)"
+  description = "Whether to create a new Internet Gateway (false for default VPC, true for custom VPC)"
   type        = bool
   default     = false
 }
 
 variable "mgn_internet_gateway_id" {
-  description = "Existing Internet Gateway ID to use (if mgn_create_internet_gateway is false)"
+  description = "Existing Internet Gateway ID to use (required if mgn_create_internet_gateway is false)"
   type        = string
   default     = null
 }
