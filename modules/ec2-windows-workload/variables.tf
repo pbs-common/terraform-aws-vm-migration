@@ -37,7 +37,7 @@ variable "associate_public_ip_address" {
 }
 
 variable "key_name" {
-  description = "EC2 key pair name for the fallback Windows password decryption / RDP. Optional when SSM Session Manager is used for access."
+  description = "EC2 key pair name for RDP password decryption. Optional fallback - SSM Session Manager is the default access method."
   type        = string
   default     = null
 }
@@ -91,15 +91,15 @@ variable "egress_rules" {
 # IAM / SSM
 
 variable "create_iam_instance_profile" {
-  description = "Whether to create an IAM role + instance profile with SSM (Session Manager, Run Command, Patch Manager) access."
+  description = "Whether to create a module-managed IAM role instead of attaching the org's shared pbs-ssm-role."
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "iam_instance_profile_name" {
-  description = "Name of an existing IAM instance profile to attach instead of creating one. Required if create_iam_instance_profile is false."
+  description = "Existing IAM instance profile to attach. Ignored if create_iam_instance_profile is true."
   type        = string
-  default     = null
+  default     = "pbs-ssm-role"
 }
 
 variable "additional_iam_policy_arns" {
