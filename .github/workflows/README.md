@@ -23,7 +23,6 @@ account.
 | `terraform-plan.yaml` | Reusable | `workflow_call` | Yes |
 | `terraform-apply.yaml` | Reusable | `workflow_call` | Yes |
 | `terraform-destroy.yaml` | Reusable | `workflow_call`, `workflow_dispatch` (non-functional) | Yes |
-| `test-oidc-creds.yaml` | Standalone utility | `workflow_dispatch` | Yes, all environments |
 
 ---
 
