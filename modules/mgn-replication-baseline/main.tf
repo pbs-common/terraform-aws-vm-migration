@@ -3,7 +3,7 @@
 
 locals {
   mgn_prefix = "${var.environment_name}-mgn"
-  
+
   common_tags = merge(
     var.tags,
     {
@@ -46,8 +46,8 @@ resource "aws_route_table" "mgn_staging" {
   vpc_id = var.vpc_id
 
   route {
-    cidr_block      = "0.0.0.0/0"
-    gateway_id      = aws_internet_gateway.mgn.id
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.mgn.id
   }
 
   tags = merge(
@@ -59,16 +59,6 @@ resource "aws_route_table" "mgn_staging" {
 resource "aws_route_table_association" "mgn_staging" {
   subnet_id      = aws_subnet.mgn_staging.id
   route_table_id = aws_route_table.mgn_staging.id
-}
-
-# Optional: Direct Connect route for replication traffic (if configured)
-resource "aws_route" "mgn_direct_connect" {
-  count = var.enable_direct_connect_path ? 1 : 0
-
-  route_table_id = aws_route_table.mgn_staging.id
-  destination_cidr_block = "10.0.0.0/8" # Adjust as needed for on-prem CIDR
-  # Note: Direct Connect is managed outside Terraform via Virtual Interface
-  # This route assumes DX VIF is already attached to the VGW and propagated
 }
 
 # ============================================================================
@@ -126,7 +116,7 @@ resource "aws_network_acl" "mgn_staging" {
       rule_no    = 100 + egress.key
       action     = "allow"
       cidr_block = egress.value
-      from_port  = 443  # MGN replication uses HTTPS
+      from_port  = 443 # MGN replication uses HTTPS
       to_port    = 443
     }
   }
@@ -188,11 +178,11 @@ resource "aws_vpc_security_group_ingress_rule" "mgn_from_source" {
 
 # Allow communication within staging subnet
 resource "aws_vpc_security_group_ingress_rule" "mgn_staging_internal" {
-  security_group_id = aws_security_group.mgn_staging.id
-  description       = "MGN staging subnet internal communication"
-  from_port         = 0
-  to_port           = 65535
-  ip_protocol       = "tcp"
+  security_group_id            = aws_security_group.mgn_staging.id
+  description                  = "MGN staging subnet internal communication"
+  from_port                    = 0
+  to_port                      = 65535
+  ip_protocol                  = "tcp"
   referenced_security_group_id = aws_security_group.mgn_staging.id
 
   tags = { Name = "mgn-staging-internal" }
@@ -451,7 +441,7 @@ resource "aws_iam_instance_profile" "mgn_agent" {
 # Cross-account replication role (for other AWS accounts to assume)
 resource "aws_iam_role" "mgn_cross_account_role" {
   count = length(var.cross_account_mgn_role_arns) > 0 ? 1 : 0
-  
+
   name               = "${local.mgn_prefix}-cross-account-role"
   assume_role_policy = data.aws_iam_policy_document.mgn_cross_account_assume[0].json
 
@@ -460,7 +450,7 @@ resource "aws_iam_role" "mgn_cross_account_role" {
 
 data "aws_iam_policy_document" "mgn_cross_account_assume" {
   count = length(var.cross_account_mgn_role_arns) > 0 ? 1 : 0
-  
+
   statement {
     effect = "Allow"
     principals {
@@ -478,7 +468,7 @@ data "aws_iam_policy_document" "mgn_cross_account_assume" {
 
 resource "aws_iam_role_policy" "mgn_cross_account_policy" {
   count = length(var.cross_account_mgn_role_arns) > 0 ? 1 : 0
-  
+
   name   = "${local.mgn_prefix}-cross-account-policy"
   role   = aws_iam_role.mgn_cross_account_role[0].id
   policy = data.aws_iam_policy_document.mgn_cross_account_policy[0].json
@@ -486,7 +476,7 @@ resource "aws_iam_role_policy" "mgn_cross_account_policy" {
 
 data "aws_iam_policy_document" "mgn_cross_account_policy" {
   count = length(var.cross_account_mgn_role_arns) > 0 ? 1 : 0
-  
+
   statement {
     sid    = "AllowCrossAccountReplication"
     effect = "Allow"
@@ -517,27 +507,27 @@ resource "aws_ssm_parameter" "mgn_replication_settings" {
       stagingAreaSubnetId = aws_subnet.mgn_staging.id
       stagingAreaTags     = merge(local.common_tags, { Purpose = "MGN-Staging" })
       replicatedDisks = {
-        ebsOptimized        = true
-        ebsEncryption       = var.enable_ebs_encryption ? "DEFAULT" : "NONE"
-        kmsKeyArn          = var.kms_key_arn
+        ebsOptimized  = true
+        ebsEncryption = var.enable_ebs_encryption ? "DEFAULT" : "NONE"
+        kmsKeyArn     = var.kms_key_arn
       }
     }
-    dataPlaneRouting   = "PRIVATE_IP"
-    defaultLargeStagingDiskType = "gp3"
-    ebsEncryption     = var.enable_ebs_encryption ? "DEFAULT" : "NONE"
-    replicationServerInstanceType = "t3.small"
-    useDedicatedReplicationServer = true
-    volumeEncryptionKeyArn = var.kms_key_arn
-    associateDefaultSecurityGroup = false
-    bandwidthThrottling = 100  # Mbps
-    createPublicIP      = false
-    dataPlaneRouting   = "PRIVATE_IP"
-    defaultLargeStagingDiskType = "gp3"
-    ebsOptimized       = true
+    dataPlaneRouting                    = "PRIVATE_IP"
+    defaultLargeStagingDiskType         = "gp3"
+    ebsEncryption                       = var.enable_ebs_encryption ? "DEFAULT" : "NONE"
+    replicationServerInstanceType       = "t3.small"
+    useDedicatedReplicationServer       = true
+    volumeEncryptionKeyArn              = var.kms_key_arn
+    associateDefaultSecurityGroup       = false
+    bandwidthThrottling                 = 100 # Mbps
+    createPublicIP                      = false
+    dataPlaneRouting                    = "PRIVATE_IP"
+    defaultLargeStagingDiskType         = "gp3"
+    ebsOptimized                        = true
     replicationServersSecurityGroupsIDs = [aws_security_group.mgn_staging.id]
-    stagingAreaSubnetId = aws_subnet.mgn_staging.id
-    stagingAreaTags    = merge(local.common_tags, { Purpose = "MGN-Staging" })
-    useDedicatedReplicationServer = true
+    stagingAreaSubnetId                 = aws_subnet.mgn_staging.id
+    stagingAreaTags                     = merge(local.common_tags, { Purpose = "MGN-Staging" })
+    useDedicatedReplicationServer       = true
   })
 
   tags = local.common_tags

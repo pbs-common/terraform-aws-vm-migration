@@ -36,18 +36,6 @@ variable "mgn_cross_account_role_arns" {
   # Example: ["arn:aws:iam::123456789012:role/mgn-replication-role", "arn:aws:iam::987654321098:role/mgn-replication-role"]
 }
 
-variable "enable_mgn_direct_connect_path" {
-  description = "Enable Direct Connect route for replication traffic"
-  type        = bool
-  default     = false
-}
-
-variable "mgn_direct_connect_vif_id" {
-  description = "Direct Connect Virtual Interface ID (if enable_mgn_direct_connect_path is true)"
-  type        = string
-  default     = null
-}
-
 variable "enable_mgn_ebs_encryption" {
   description = "Enable EBS encryption at rest for replicated volumes"
   type        = bool

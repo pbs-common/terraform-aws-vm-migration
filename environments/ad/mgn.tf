@@ -25,7 +25,6 @@ module "mgn_replication_baseline" {
   source_vpc_cidr_blocks      = var.mgn_source_vpc_cidr_blocks
   target_vpc_cidr_blocks      = var.mgn_target_vpc_cidr_blocks
   cross_account_mgn_role_arns = var.mgn_cross_account_role_arns
-  enable_direct_connect_path  = var.enable_mgn_direct_connect_path
   enable_ebs_encryption       = var.enable_mgn_ebs_encryption
   kms_key_arn                 = var.mgn_kms_key_arn
 
