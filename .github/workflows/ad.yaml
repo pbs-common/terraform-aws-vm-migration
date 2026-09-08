@@ -11,6 +11,7 @@ on:
     paths:
       - "environments/ad/**"
       - "modules/ec2-windows-workload/**"
+      - "modules/mgn-replication-baseline/**"
 
 permissions:
   contents: read
