@@ -40,24 +40,6 @@ variable "cross_account_mgn_role_arns" {
   default     = []
 }
 
-variable "enable_direct_connect_path" {
-  description = "Whether to configure Direct Connect route for replication traffic"
-  type        = bool
-  default     = false
-}
-
-variable "direct_connect_virtual_interface_id" {
-  description = "Direct Connect VIF ID if enable_direct_connect_path is true"
-  type        = string
-  default     = null
-}
-
-variable "direct_connect_bgp_asn" {
-  description = "BGP ASN for Direct Connect VIF"
-  type        = number
-  default     = null
-}
-
 variable "enable_ebs_encryption" {
   description = "Enable EBS encryption at rest for replicated volumes"
   type        = bool
