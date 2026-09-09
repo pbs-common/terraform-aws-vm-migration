@@ -29,7 +29,7 @@ jobs:
       working_directory: environments/ad
       runs_on: ubuntu-latest
 
-  # Step 2: Plan Terraform changes
+  # Step 2: Plan Terraform changes.
   plan-ad:
     name: Plan AD Environment
     needs: validate-ad
@@ -50,8 +50,7 @@ jobs:
       OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
       TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
 
-  # Step 3: Apply the plan (only on main branch after approval)
-  #         Requires plan artifact from plan-ad job
+  # Step 3: Apply the plan artifact produced by plan-ad, main branch only.
   apply-ad:
     name: Apply AD Environment
     needs: plan-ad

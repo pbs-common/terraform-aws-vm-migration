@@ -50,6 +50,18 @@ locals {
       cidr_block  = pair[1]
     }]
   ]) : r.key => r }
+
+  # Third SG rules, once the overflow SG also hits AWS's 60-rule limit.
+  overflow2_ingress_rules_flat = { for r in flatten([
+    for pair in setproduct(local.ad_ports, var.overflow2_cidr_blocks) : [{
+      key         = "${pair[0].protocol}-${pair[0].from_port}-${pair[0].to_port}-${pair[1]}"
+      description = "${pair[0].description} from ${pair[1]}"
+      from_port   = pair[0].from_port
+      to_port     = pair[0].to_port
+      protocol    = pair[0].protocol
+      cidr_block  = pair[1]
+    }]
+  ]) : r.key => r }
 }
 
 # Used only to resolve the VPC CIDR above.
@@ -95,8 +107,38 @@ resource "aws_vpc_security_group_ingress_rule" "overflow" {
   tags = merge(var.tags, { Name = "ad-ports-overflow-sg-ingress-${replace(each.key, "/", "_")}" })
 }
 
+resource "aws_security_group" "ad_ports_overflow2" {
+  count = length(var.overflow2_cidr_blocks) > 0 ? 1 : 0
+
+  name        = "ad-ports-overflow2-sg"
+  description = "Third AD port rules"
+  vpc_id      = data.aws_vpc.this.id
+
+  tags = merge(var.tags, { Name = "ad-ports-overflow2-sg" })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "overflow2" {
+  for_each = local.overflow2_ingress_rules_flat
+
+  security_group_id = aws_security_group.ad_ports_overflow2[0].id
+  description       = each.value.description
+  from_port         = each.value.from_port
+  to_port           = each.value.to_port
+  ip_protocol       = each.value.protocol
+  cidr_ipv4         = each.value.cidr_block
+
+  tags = merge(var.tags, { Name = "ad-ports-overflow2-sg-ingress-${replace(each.key, "/", "_")}" })
+}
+
 locals {
-  overflow_sg_ids = length(var.overflow_cidr_blocks) > 0 ? [aws_security_group.ad_ports_overflow[0].id] : []
+  overflow_sg_ids = concat(
+    length(var.overflow_cidr_blocks) > 0 ? [aws_security_group.ad_ports_overflow[0].id] : [],
+    length(var.overflow2_cidr_blocks) > 0 ? [aws_security_group.ad_ports_overflow2[0].id] : [],
+  )
 }
 
 module "dc1" {

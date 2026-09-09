@@ -58,6 +58,12 @@ variable "overflow_cidr_blocks" {
   default     = []
 }
 
+variable "overflow2_cidr_blocks" {
+  description = "Extra CIDR blocks for a third SG, once the primary and second SGs both hit AWS's 60-rule limit."
+  type        = list(string)
+  default     = []
+}
+
 variable "key_name" {
   description = "Optional EC2 key pair name, kept as an RDP fallback alongside SSM Session Manager access."
   type        = string
