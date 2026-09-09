@@ -102,6 +102,12 @@ variable "iam_instance_profile_name" {
   default     = null
 }
 
+variable "session_log_group_arn" {
+  description = "ARN of the CloudWatch Log Group to grant session-logging write access to. Leave null to skip."
+  type        = string
+  default     = null
+}
+
 variable "additional_iam_policy_arns" {
   description = "Additional IAM policy ARNs to attach to the role created by this module. Ignored if create_iam_instance_profile is false."
   type        = list(string)

@@ -107,8 +107,7 @@ resource "aws_iam_role_policy_attachment" "ssm_managed_instance_core" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
-# Session Manager logging (CloudWatch Logs + S3) needs permissions AmazonSSMManagedInstanceCore
-# doesn't grant. Matches the org's shared pbs-ssm-role.
+# Session Manager logging needs permissions AmazonSSMManagedInstanceCore doesn't grant.
 data "aws_iam_policy_document" "session_logging" {
   count = var.create_iam_instance_profile ? 1 : 0
 
@@ -120,30 +119,16 @@ data "aws_iam_policy_document" "session_logging" {
     resources = ["*"]
   }
 
-  statement {
-    actions = [
-      "logs:CreateLogGroup",
-      "logs:CreateLogStream",
-      "logs:DescribeLogGroups",
-      "logs:DescribeLogStreams",
-      "logs:PutLogEvents",
-    ]
-    resources = ["*"]
-  }
-
-  statement {
-    actions = [
-      "s3:GetBucketLocation",
-      "s3:GetEncryptionConfiguration",
-      "s3:PutObject",
-      "s3:PutObjectAcl",
-      "s3:GetObject",
-      "s3:AbortMultipartUpload",
-      "s3:ListMultipartUploadParts",
-      "s3:ListBucket",
-      "s3:ListBucketMultipartUploads",
-    ]
-    resources = ["*"]
+  dynamic "statement" {
+    for_each = var.session_log_group_arn != null ? [1] : []
+    content {
+      actions = [
+        "logs:CreateLogStream",
+        "logs:DescribeLogStreams",
+        "logs:PutLogEvents",
+      ]
+      resources = ["${var.session_log_group_arn}:*"]
+    }
   }
 }
 

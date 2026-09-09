@@ -99,6 +99,12 @@ locals {
   overflow_sg_ids = length(var.overflow_cidr_blocks) > 0 ? [aws_security_group.ad_ports_overflow[0].id] : []
 }
 
+resource "aws_cloudwatch_log_group" "ssm_sessions" {
+  name              = "/aws/ssm/session-logs/ad"
+  retention_in_days = 90
+  tags              = var.tags
+}
+
 module "dc1" {
   source = "../../modules/ec2-windows-workload"
 
@@ -109,7 +115,8 @@ module "dc1" {
   instance_type              = var.instance_type
   key_name                   = var.key_name
 
-  root_volume_size = var.root_volume_size
+  root_volume_size      = var.root_volume_size
+  session_log_group_arn = aws_cloudwatch_log_group.ssm_sessions.arn
 
   ingress_rules      = local.ad_ingress_rules
   security_group_ids = local.overflow_sg_ids
@@ -138,7 +145,8 @@ module "dc2" {
   instance_type              = var.instance_type
   key_name                   = var.key_name
 
-  root_volume_size = var.root_volume_size
+  root_volume_size      = var.root_volume_size
+  session_log_group_arn = aws_cloudwatch_log_group.ssm_sessions.arn
 
   ingress_rules      = local.ad_ingress_rules
   security_group_ids = local.overflow_sg_ids
