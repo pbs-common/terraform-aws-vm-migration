@@ -7,13 +7,13 @@ must exist under the repo's **Settings > Environments** in GitHub, with the list
 Note: GitHub Environment secrets are write-only — their values can never be read back via the UI or
 API, so these subfolders record which secret/variable *names* each environment must provide, not values.
 
-| Environment | Used by | Required secrets |
+| Environment | Required secrets |
 |---|---|---|
-| [dev](dev/) | test-oidc-creds.yaml, terraform-plan.yaml | `OIDC_ROLE_ARN` |
-| [staging](staging/) | test-oidc-creds.yaml, terraform-plan.yaml | `OIDC_ROLE_ARN` |
-| [prod](prod/) | test-oidc-creds.yaml, terraform-plan.yaml | `OIDC_ROLE_ARN` |
-| [workspaces](workspaces/) | test-oidc-creds.yaml | `OIDC_ROLE_ARN` |
-| [ad](ad/) | test-oidc-creds.yaml | `OIDC_ROLE_ARN` |
+| [dev](dev/) | `OIDC_ROLE_ARN` |
+| [staging](staging/) | `OIDC_ROLE_ARN` |
+| [prod](prod/) | `OIDC_ROLE_ARN` |
+| [workspaces](workspaces/) |  `OIDC_ROLE_ARN` |
+| [ad](ad/) | `OIDC_ROLE_ARN` |
 
 `terraform-plan.yaml` additionally accepts an optional `TF_VAR_EXTRAS` secret (a JSON map injected as
 `TF_VAR_*` environment variables) and expects a `<environment>.tfvars` file in the caller's working
