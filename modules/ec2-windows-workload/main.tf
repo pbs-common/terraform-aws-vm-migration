@@ -107,6 +107,39 @@ resource "aws_iam_role_policy_attachment" "ssm_managed_instance_core" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 }
 
+# Session Manager logging needs permissions AmazonSSMManagedInstanceCore doesn't grant.
+data "aws_iam_policy_document" "session_logging" {
+  count = var.create_iam_instance_profile ? 1 : 0
+
+  statement {
+    actions = [
+      "cloudwatch:PutMetricData",
+      "ec2:DescribeInstanceStatus",
+    ]
+    resources = ["*"]
+  }
+
+  dynamic "statement" {
+    for_each = var.session_log_group_arn != null ? [1] : []
+    content {
+      actions = [
+        "logs:CreateLogStream",
+        "logs:DescribeLogStreams",
+        "logs:PutLogEvents",
+      ]
+      resources = ["${var.session_log_group_arn}:*"]
+    }
+  }
+}
+
+resource "aws_iam_role_policy" "session_logging" {
+  count = var.create_iam_instance_profile ? 1 : 0
+
+  name   = "${var.name}-session-logging"
+  role   = aws_iam_role.this[0].name
+  policy = data.aws_iam_policy_document.session_logging[0].json
+}
+
 resource "aws_iam_role_policy_attachment" "additional" {
   for_each = var.create_iam_instance_profile ? toset(var.additional_iam_policy_arns) : toset([])
 
