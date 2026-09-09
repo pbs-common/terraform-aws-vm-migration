@@ -141,6 +141,31 @@ locals {
   )
 }
 
+resource "aws_cloudwatch_log_group" "ssm_sessions" {
+  name              = "/aws/ssm/session-logs/ad"
+  retention_in_days = 90
+  tags              = var.tags
+}
+
+# Account-level Session Manager preferences. Points sessions at the log group above.
+resource "aws_ssm_document" "session_manager_prefs" {
+  name            = "SSM-SessionManagerRunShell"
+  document_type   = "Session"
+  document_format = "JSON"
+
+  content = jsonencode({
+    schemaVersion = "1.0"
+    description   = "Document to hold regional settings for Session Manager"
+    sessionType   = "Standard_Stream"
+    inputs = {
+      cloudWatchLogGroupName      = aws_cloudwatch_log_group.ssm_sessions.name
+      cloudWatchEncryptionEnabled = true
+    }
+  })
+
+  tags = var.tags
+}
+
 module "dc1" {
   source = "../../modules/ec2-windows-workload"
 
@@ -151,7 +176,8 @@ module "dc1" {
   instance_type              = var.instance_type
   key_name                   = var.key_name
 
-  root_volume_size = var.root_volume_size
+  root_volume_size      = var.root_volume_size
+  session_log_group_arn = aws_cloudwatch_log_group.ssm_sessions.arn
 
   ingress_rules      = local.ad_ingress_rules
   security_group_ids = local.overflow_sg_ids
@@ -180,7 +206,8 @@ module "dc2" {
   instance_type              = var.instance_type
   key_name                   = var.key_name
 
-  root_volume_size = var.root_volume_size
+  root_volume_size      = var.root_volume_size
+  session_log_group_arn = aws_cloudwatch_log_group.ssm_sessions.arn
 
   ingress_rules      = local.ad_ingress_rules
   security_group_ids = local.overflow_sg_ids
