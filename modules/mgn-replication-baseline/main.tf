@@ -177,6 +177,20 @@ resource "aws_vpc_security_group_ingress_rule" "mgn_from_source" {
   tags = { Name = "mgn-replication-from-${replace(each.value, "/", "-")}" }
 }
 
+# Allow replication data port 1500 from source networks
+resource "aws_vpc_security_group_ingress_rule" "mgn_replication_data" {
+  for_each = toset(var.source_vpc_cidr_blocks)
+
+  security_group_id = aws_security_group.mgn_staging.id
+  description       = "MGN replication data from ${each.value}"
+  from_port         = 1500
+  to_port           = 1500
+  ip_protocol       = "tcp"
+  cidr_ipv4         = each.value
+
+  tags = { Name = "mgn-replication-data-from-${replace(each.value, "/", "-")}" }
+}
+
 # Allow communication within staging subnet
 resource "aws_vpc_security_group_ingress_rule" "mgn_staging_internal" {
   security_group_id            = aws_security_group.mgn_staging.id
@@ -400,6 +414,12 @@ data "aws_iam_policy_document" "mgn_agent_policy" {
       "mgn:UpdateReplicationConfiguration",
       "mgn:PutSourceServerAction",
       "mgn:UpdateSourceServer",
+      "mgn:GetAgentRuntimeConfigurationForMgn",
+      "mgn:GetAgentCommandForMgn",
+      "mgn:UpdateAgentBacklogForMgn",
+      "mgn:UpdateAgentSourcePropertiesForMgn",
+      "mgn:SendAgentMetricsForMgn",
+      "mgn:GetAgentConfirmedResumeInfoForMgn",
     ]
     resources = ["*"]
   }
@@ -433,6 +453,18 @@ data "aws_iam_policy_document" "mgn_agent_policy" {
 resource "aws_iam_instance_profile" "mgn_agent" {
   name = "${local.mgn_prefix}-agent-profile"
   role = aws_iam_role.mgn_agent_role.name
+}
+
+# Attach AWS managed policy for agent installation
+resource "aws_iam_role_policy_attachment" "mgn_agent_installation" {
+  role       = aws_iam_role.mgn_agent_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSApplicationMigrationAgentInstallationPolicy"
+}
+
+# Attach AWS managed policy for EC2 instance running the agent
+resource "aws_iam_role_policy_attachment" "mgn_agent_ec2_policy" {
+  role       = aws_iam_role.mgn_agent_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSApplicationMigrationServiceEc2InstancePolicy"
 }
 
 # ============================================================================
