@@ -1,6 +1,7 @@
 # org-delegation
 
-AWS Organizations delegation for AWS Application Migration Service (MGN), captured as code.
+AWS Organizations delegation for AWS Transform, captured as code: both the MGN and
+CloudFormation StackSets service principals, delegated to one member account.
 
 ## What this manages
 

@@ -1,10 +1,13 @@
-# AWS Organizations delegation for Application Migration Service (MGN).
+# AWS Organizations delegation for AWS Transform: both the MGN and CloudFormation
+# StackSets service principals, delegated to one member account.
 #
 # Runs in the ORGANIZATION MANAGEMENT ACCOUNT. See README.md in this directory.
 #
-# The registration this captures already exists in AWS (created 2026-09-11), so the
-# import block below adopts it. Terraform would otherwise try to create it and fail
-# with AccountAlreadyRegisteredException.
+# BOTH registrations are already live, by different routes: MGN was registered by
+# hand on 2026-09-11 before this code existed, and StackSets was created by this
+# configuration on the apply the same day. The import block below adopts whichever
+# already exist, so the directory is reproducible from an empty state; without it
+# Terraform would try to create them and fail with AccountAlreadyRegisteredException.
 
 module "mgn_delegation" {
   source = "../../modules/mgn-organizations-delegation"

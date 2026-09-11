@@ -1,4 +1,6 @@
-# Organization-level delegation for AWS Application Migration Service (MGN).
+# Organization-level delegation of one or more service principals to a member
+# account. Written for AWS Transform's MGN and CloudFormation StackSets pair, but
+# the resource is generic -- nothing here is MGN-specific.
 #
 # SCOPE: these are AWS Organizations management-account resources. Only a principal
 # in the management account can create them. A member-account caller is rejected by

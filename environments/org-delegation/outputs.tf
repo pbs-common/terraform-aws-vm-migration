@@ -1,5 +1,5 @@
 output "delegated_administrator_account_id" {
-  description = "Account registered as MGN delegated administrator."
+  description = "Account registered as delegated administrator for every principal in service_principals (MGN and CloudFormation StackSets)."
   value       = module.mgn_delegation.delegated_administrator_account_id
 }
 

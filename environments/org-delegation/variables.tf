@@ -16,7 +16,7 @@ variable "aws_region" {
 # reusable plan/apply workflows, and this directory deliberately has no workflow
 # (see README) -- so nothing would decode it and the variable would stay unset.
 variable "delegated_administrator_account_id" {
-  description = "Member account registered as the MGN delegated administrator (pbs-sdo-shared-workspace)."
+  description = "Member account registered as delegated administrator for every principal in service_principals -- MGN and CloudFormation StackSets (pbs-sdo-shared-workspace)."
   type        = string
 }
 
