@@ -14,6 +14,10 @@ terraform.rc
 tfplan
 plan_output.txt
 
+## Python (the CI coverage checker in .github/scripts and its self-test)
+__pycache__/
+*.py[cod]
+
 ## OS
 .DS_Store
 

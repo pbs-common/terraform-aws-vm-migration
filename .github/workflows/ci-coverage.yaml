@@ -1,0 +1,43 @@
+name: CI Coverage
+
+# DELIBERATELY UNFILTERED. Every other workflow here has a `paths:` list, which is
+# exactly the blind spot this job exists to close: a new environments/* or modules/*
+# directory matches nobody's filters, so it triggers no workflow and passes CI by never
+# being looked at. A path filter on this job would reintroduce that hole in the one
+# place that checks for it.
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Terraform CI coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install "pyyaml==6.0.3"
+
+      # Order matters: the self-test proves the checker still FAILS on each defect shape
+      # it was written for. A checker that has silently stopped detecting anything passes
+      # the run above and looks identical to a clean repository.
+      - name: Prove the checker still catches what it claims (mutation self-test)
+        run: python .github/scripts/test_check_terraform_ci_coverage.py
+
+      - name: Check every Terraform directory is linted by CI
+        run: python .github/scripts/check_terraform_ci_coverage.py

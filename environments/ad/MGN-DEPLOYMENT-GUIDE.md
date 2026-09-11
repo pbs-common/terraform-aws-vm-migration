@@ -36,7 +36,6 @@ mgn_staging_subnet_cidr = "10.0.100.0/24"
 # Network Configuration
 # IMPORTANT: Update these with your actual on-prem and target VPC CIDRs
 mgn_source_vpc_cidr_blocks = ["10.0.0.0/8"]        # On-prem network
-mgn_target_vpc_cidr_blocks = ["10.1.0.0/16"]       # Target workload VPC
 
 # Cross-Account Configuration (update after other accounts are ready)
 mgn_cross_account_role_arns = []

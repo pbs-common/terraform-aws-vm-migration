@@ -4,6 +4,11 @@ This repo runs Terraform through GitHub Actions. Pipelines are split into two la
 
 - **Entrypoint workflows** — one per environment. They own the triggers (push, PR, manual) and
   wire together the reusable jobs. Today only `ad.yaml` exists.
+- **Repository-wide checks** — `ci-coverage.yaml`, deliberately unfiltered. Every other workflow
+  here has a `paths:` list, so a new `environments/*` or `modules/*` directory matches nobody's
+  filters and passes CI by never being looked at. This one runs on every pull request and fails
+  if any Terraform directory is neither covered by a workflow nor recorded as a deliberate
+  exclusion. See [Coverage](#coverage-every-terraform-directory-is-linted).
 - **Reusable workflows** — `terraform-validate`, `terraform-plan`, `terraform-apply`,
   `terraform-destroy`. They are `workflow_call`-only building blocks and are never run directly
   from the Actions tab (with one caveat noted under [Destroy](#destroy)).
@@ -19,6 +24,7 @@ account.
 | File | Type | Trigger | Touches AWS |
 |---|---|---|---|
 | `ad.yaml` | Entrypoint | `push` to `main`, `pull_request` (path-filtered), `workflow_dispatch` | Yes, via reusable jobs |
+| `ci-coverage.yaml` | Repository-wide check | `push` to `main`, `pull_request` (**no** path filter), `workflow_dispatch` | No |
 | `terraform-validate.yaml` | Reusable | `workflow_call` | No |
 | `terraform-plan.yaml` | Reusable | `workflow_call` | Yes |
 | `terraform-apply.yaml` | Reusable | `workflow_call` | Yes |
@@ -104,8 +110,8 @@ Key behaviours:
 
 | Event | What runs | Notes |
 |---|---|---|
-| PR touching `environments/ad/**` or `modules/ec2-windows-workload/**` | `validate-ad` only | Format check. Plan and apply are skipped because the ref is not `refs/heads/main`. |
-| PR touching anything else | Nothing | The `pull_request` trigger is path-filtered. |
+| PR touching any path in `ad.yaml`'s `paths:` list | `coverage` + `validate-ad` | Format check. Plan and apply are skipped because the ref is not `refs/heads/main`. The filter list is **not** restated here — read it from `ad.yaml`, which is the only place it is maintained. |
+| PR touching anything else | `coverage` only | `ad.yaml`'s `pull_request` trigger is path-filtered; `ci-coverage.yaml`'s is not, so it runs on every pull request. |
 | Push to `main` (merge included) | `validate-ad` → `plan-ad` → `apply-ad` | **No path filter on `push`.** Any commit landing on `main` runs the full AD pipeline, even a README-only change. |
 
 Because plan does not run on pull requests, the "Post Plan to PR" step in `terraform-plan.yaml`
@@ -205,6 +211,50 @@ Same input surface as apply, but runs `terraform destroy --var-file <environment
 
 ---
 
+## Coverage: every Terraform directory is linted
+
+CI lints Terraform with tflint inside `terraform-plan.yaml`. That is a *reusable* workflow, so it
+only ever runs for a directory some entrypoint points it at, and only when that entrypoint's
+`paths:` filters fire. Two things follow, and both were live defects on 2026-09-11:
+
+- **A directory no filter matches is not linted at all.** `environments/org-delegation` and
+  `modules/mgn-organizations-delegation` merged unlinted while the repository looked covered.
+- **A module an environment consumes but no filter names is not linted either.** Editing it
+  changes that environment's plan and triggers nothing. `modules/ssm-session-access-policy` was in
+  that state despite being consumed by `environments/ad/main.tf`.
+
+`ci-coverage.yaml` runs `.github/scripts/check_terraform_ci_coverage.py` on every pull request,
+with no path filter of its own, and fails on either. It also fails if a step runs tflint without
+`TFLINT_CONFIG_FILE`.
+
+### Why tflint needs `TFLINT_CONFIG_FILE`
+
+Without a config declaring the AWS plugin, `tflint --init` installs nothing and only the bundled
+terraform ruleset runs — every AWS-specific check is silently absent while the step still reports
+success. The config lives at the repository root, and tflint reads `.tflint.hcl` from its **own
+working directory only**; it never walks up. `terraform-plan.yaml` sets
+`defaults.run.working-directory` to the environment being planned, so the root config is invisible
+to it unless the path is passed explicitly. Measured with the pinned 0.64.0 from `environments/ad`:
+
+    bare                        + ruleset.terraform (0.15.0-bundled)
+    TFLINT_CONFIG_FILE=<root>   + ruleset.aws (0.44.0)
+                                + ruleset.terraform (0.15.0-bundled)
+
+### Excluding a directory
+
+A directory that genuinely should not be in CI goes in
+[`.github/terraform-ci-coverage-exclusions.json`](../terraform-ci-coverage-exclusions.json) with a
+reason. The check asserts both directions: an excluded directory must still exist, and must **not**
+also be covered — so an exclusion cannot outlive the reason recorded for it.
+
+`.github/scripts/test_check_terraform_ci_coverage.py` is the checker's mutation self-test. It
+reintroduces each defect shape into a copy of this repository and requires the checker to reject
+it, with a control run proving it still accepts the tree as committed. `ci-coverage.yaml` runs the
+self-test **before** the check, because a checker that has silently stopped detecting anything
+looks exactly like a clean repository.
+
+---
+
 ## Adding a pipeline for a new environment
 
 1. Create `environments/<name>/` with `main.tf`, `variables.tf`, `versions.tf` (S3 backend block
@@ -213,7 +263,10 @@ Same input surface as apply, but runs `terraform destroy --var-file <environment
    that account's role. Add required reviewers for anything production-facing.
 3. Confirm the role works by running **Test OIDC Credentials** and checking the account ID.
 4. Copy `ad.yaml` to `<name>.yaml`, updating: the `pull_request` path filters, `working_directory`,
-   `environment`, `s3_backend_bucket`, `s3_backend_key`, and `aws_region`.
+   `environment`, `s3_backend_bucket`, `s3_backend_key`, and `aws_region`. The path filters must
+   name the new environment **and every module it consumes**, or CI will not run when one of those
+   modules changes. `ci-coverage.yaml` fails the pull request if either is missing, so this is
+   enforced rather than remembered.
 5. Update [environments/README.md](../../environments/README.md) with the new row.
 
 ---

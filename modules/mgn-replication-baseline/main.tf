@@ -554,13 +554,10 @@ resource "aws_ssm_parameter" "mgn_replication_settings" {
     associateDefaultSecurityGroup       = false
     bandwidthThrottling                 = 100 # Mbps
     createPublicIP                      = false
-    dataPlaneRouting                    = "PRIVATE_IP"
-    defaultLargeStagingDiskType         = "gp3"
     ebsOptimized                        = true
     replicationServersSecurityGroupsIDs = [aws_security_group.mgn_staging.id]
     stagingAreaSubnetId                 = aws_subnet.mgn_staging.id
     stagingAreaTags                     = merge(local.common_tags, { Purpose = "MGN-Staging" })
-    useDedicatedReplicationServer       = true
   })
 
   tags = local.common_tags

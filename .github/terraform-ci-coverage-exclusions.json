@@ -1,0 +1,19 @@
+{
+  "_comment": [
+    "Terraform directories deliberately NOT linted or planned by any workflow.",
+    "Read and enforced by .github/scripts/check_terraform_ci_coverage.py: an entry here",
+    "must name a directory that exists AND is not covered by any workflow, so an",
+    "exclusion cannot outlive its reason. Anything not listed here must be covered.",
+    "Adding an entry is a decision to leave code unlinted -- say why, not that it is."
+  ],
+  "excluded": [
+    {
+      "path": "environments/org-delegation",
+      "reason": "Runs against the organization MANAGEMENT account, and the OIDC_ROLE_ARN secret CI holds targets the workload account. Pointing CI at a role with management-account Organizations write access is a separate decision, taken explicitly rather than inherited. See environments/org-delegation/README.md, 'Where it runs'. Consequence, stated here because it is easy to miss: this directory gets no tflint, no fmt-check and no validate from CI, so run them by hand before changing it."
+    },
+    {
+      "path": "modules/mgn-organizations-delegation",
+      "reason": "Consumed only by environments/org-delegation, which is excluded above for its credential boundary. A workflow filtering on this module would have nothing it could trigger a plan of. If this module ever gains a second consumer that IS in CI, delete this entry -- the coverage check will then require it."
+    }
+  ]
+}

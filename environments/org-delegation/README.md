@@ -49,6 +49,22 @@ This directory is deliberately **not** wired into a GitHub Actions workflow. The
 management-account Organizations write access is a separate decision that should be made
 explicitly rather than inherited from this change.
 
+That omission is recorded in
+[`.github/terraform-ci-coverage-exclusions.json`](../../.github/terraform-ci-coverage-exclusions.json),
+which `ci-coverage.yaml` enforces: every other Terraform directory must be covered by a workflow,
+and this one must stay uncovered for as long as the entry stands. Wiring it into CI without
+removing the entry fails the check rather than leaving a stale reason behind.
+
+**The consequence, since it is easy to miss:** no workflow means no `tflint`, no
+`terraform fmt -check` and no `terraform validate` for this directory. Run them by hand before
+changing it, with the repository-root config so the AWS ruleset actually loads:
+
+```console
+terraform fmt -recursive -check .
+TFLINT_CONFIG_FILE=<repo root>/.tflint.hcl tflint --init
+TFLINT_CONFIG_FILE=<repo root>/.tflint.hcl tflint --format compact
+```
+
 ## State
 
 Applied 2026-09-11. State lives in the management account's existing Terraform state

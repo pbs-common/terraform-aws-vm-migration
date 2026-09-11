@@ -35,11 +35,6 @@ variable "mgn_source_vpc_cidr_blocks" {
   default     = ["10.0.0.0/8"] # Adjust based on your on-prem network
 }
 
-variable "mgn_target_vpc_cidr_blocks" {
-  description = "CIDR blocks of target VPCs where workloads will be placed after replication"
-  type        = list(string)
-  default     = []
-}
 
 variable "mgn_cross_account_role_arns" {
   description = "List of cross-account MGN role ARNs for outbound replication connectors"

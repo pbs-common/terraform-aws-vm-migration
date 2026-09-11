@@ -41,10 +41,6 @@ variable "source_vpc_cidr_blocks" {
   type        = list(string)
 }
 
-variable "target_vpc_cidr_blocks" {
-  description = "CIDR blocks of target VPCs for workload placement after replication"
-  type        = list(string)
-}
 
 variable "cross_account_mgn_role_arns" {
   description = "List of cross-account MGN role ARNs for outbound connectors (e.g., [\"arn:aws:iam::123456789012:role/mgn-replication-role\"])"

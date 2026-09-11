@@ -38,7 +38,6 @@ mgn_staging_subnet_cidr     = "172.31.100.0/24"
 mgn_create_internet_gateway = false
 mgn_internet_gateway_id     = null
 mgn_source_vpc_cidr_blocks  = ["10.0.0.0/8"]
-mgn_target_vpc_cidr_blocks  = ["172.31.0.0/16"]
 mgn_cross_account_role_arns = []
 enable_mgn_ebs_encryption   = true
 mgn_kms_key_arn             = null
