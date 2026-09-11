@@ -138,8 +138,10 @@ class CheckerSelfTest(unittest.TestCase):
 
     # ---- check 1: tflint running without a usable config ------------------------
     def test_tflint_without_config_file_is_rejected(self) -> None:
+        # Remove ONLY the config line. Deleting the whole `env:` block would orphan the
+        # sibling GITHUB_TOKEN and yield invalid YAML, which the checker rejects for a
+        # different reason -- a mutation that lands on the wrong defect proves nothing.
         edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "        env:\n"
              "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n", "")
         self.assert_rejected("runs tflint without TFLINT_CONFIG_FILE")
 
