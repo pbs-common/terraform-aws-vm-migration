@@ -354,8 +354,10 @@ class CheckerSelfTest(unittest.TestCase):
              "          tflint --init\n          tflint --format compact\n",
              "          echo skipped\n")
         edit(self.repo / ".github/workflows/ci-coverage.yaml",
-             '            ( cd "$d" && tflint --init && tflint --format compact ) || FAILED=1\n',
+             '            ( cd "$d" && tflint --format compact ) || FAILED=1\n',
              '            ( cd "$d" && echo skipped ) || FAILED=1\n')
+        edit(self.repo / ".github/workflows/ci-coverage.yaml",
+             "          tflint --init\n", "          echo skipped\n")
         self.assert_rejected("no workflow in .github/workflows runs tflint")
 
 

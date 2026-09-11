@@ -79,12 +79,20 @@ jobs:
       - name: Run TFLint in every Terraform directory
         env:
           TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl
+          # Plugin downloads hit the GitHub releases API. Unauthenticated, that is a
+          # shared-IP rate limit the runner regularly exhausts.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -u
+          # Once, not per directory: plugins install to a shared ~/.tflint.d/plugins, and
+          # re-running it per directory made six identical GitHub API calls for the same
+          # plugin. Together with the plan job's that exceeded the anonymous rate limit and
+          # failed CI -- hence GITHUB_TOKEN above, which authenticates the fetch.
+          tflint --init
           FAILED=0
           for d in $(python .github/scripts/check_terraform_ci_coverage.py --list-dirs); do
             echo "::group::$d"
-            ( cd "$d" && tflint --init && tflint --format compact ) || FAILED=1
+            ( cd "$d" && tflint --format compact ) || FAILED=1
             echo "::endgroup::"
           done
           if [ "$FAILED" -ne 0 ]; then

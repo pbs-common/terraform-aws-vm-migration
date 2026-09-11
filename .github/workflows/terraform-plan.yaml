@@ -101,6 +101,10 @@ jobs:
       - name: Run TFLint
         env:
           TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl
+          # `tflint --init` fetches the AWS ruleset from the GitHub releases API.
+          # Unauthenticated it shares a per-IP limit with every other runner and does fail:
+          # measured 2026-09-11, "403 API rate limit exceeded ... rate reset in 7m53s".
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tflint --init
           tflint --format compact
