@@ -45,6 +45,8 @@ def clone_repo(dest: Path) -> Path:
         src = REPO / name
         if src.is_dir():
             shutil.copytree(src, root / name)
+    (root / checker.TFLINT_CONFIG).write_text(
+        (REPO / checker.TFLINT_CONFIG).read_text(encoding="utf-8"), encoding="utf-8")
     return root
 
 
@@ -66,6 +68,12 @@ class CheckerSelfTest(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.repo = clone_repo(Path(self.tmp.name))
 
+    def assert_rejected(self, needle: str) -> None:
+        failures = checker.run(self.repo)
+        self.assertTrue(failures, f"mutation was NOT caught; expected a failure mentioning {needle!r}")
+        joined = "\n".join(failures)
+        self.assertIn(needle, joined, f"caught, but for the wrong reason:\n{joined}")
+
     # ---- control ----------------------------------------------------------------
     def test_the_real_repository_passes(self) -> None:
         """The control. Without this every 'mutation rejected' below could be a checker
@@ -75,13 +83,6 @@ class CheckerSelfTest(unittest.TestCase):
             "the repository as committed must pass, or the mutation cases below prove "
             "nothing about the checker's ability to discriminate",
         )
-
-    # ---- helper -----------------------------------------------------------------
-    def assert_rejected(self, needle: str) -> None:
-        failures = checker.run(self.repo)
-        self.assertTrue(failures, f"mutation was NOT caught; expected a failure mentioning {needle!r}")
-        joined = "\n".join(failures)
-        self.assertIn(needle, joined, f"caught, but for the wrong reason:\n{joined}")
 
     # ---- check 2: an uncovered ADDITION, the defect issue #38 is about ------------
     def test_new_environment_directory_is_rejected(self) -> None:
@@ -96,6 +97,21 @@ class CheckerSelfTest(unittest.TestCase):
         (new / "main.tf").write_text('variable "x" { type = string }\n')
         self.assert_rejected("modules/brand-new-module: contains Terraform but no workflow")
 
+    def test_a_path_filter_alone_does_not_make_a_module_covered(self) -> None:
+        """A filter matching a module nothing plans triggers a run that never loads it.
+
+        Counting that as coverage was a real defect: `modules/unconsumed` below is named
+        in ad.yaml's filters, so the AD plan runs when it changes -- and that plan never
+        reads the module, so tflint never lints it.
+        """
+        new = self.repo / "modules" / "unconsumed"
+        new.mkdir()
+        (new / "main.tf").write_text('variable "x" { type = string }\n')
+        edit(self.repo / ".github/workflows/ad.yaml",
+             '      - "modules/ssm-session-access-policy/**"\n',
+             '      - "modules/ssm-session-access-policy/**"\n      - "modules/unconsumed/**"\n')
+        self.assert_rejected("modules/unconsumed: contains Terraform but no workflow")
+
     # ---- check 3: a module consumed by a planned environment but unfiltered -------
     def test_dropping_a_consumed_module_from_the_filters_is_rejected(self) -> None:
         edit(self.repo / ".github/workflows/ad.yaml",
@@ -107,20 +123,75 @@ class CheckerSelfTest(unittest.TestCase):
         new.mkdir()
         (new / "main.tf").write_text('variable "x" { type = string }\n')
         main = self.repo / "environments/ad/main.tf"
-        main.write_text(
-            main.read_text()
-            + '\nmodule "late" {\n  source = "../../modules/late-arrival"\n}\n'
-        )
+        main.write_text(main.read_text()
+                        + '\nmodule "late" {\n  source = "../../modules/late-arrival"\n}\n')
         self.assert_rejected("consumes modules/late-arrival")
 
-    # ---- check 1: tflint running without its config ------------------------------
+    # ---- check 4: shared inputs that decide what the plan and lint DO ------------
+    def test_dropping_the_tflint_config_from_the_filters_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml", '      - ".tflint.hcl"\n', "")
+        self.assert_rejected("no paths filter fires for .tflint.hcl")
+
+    def test_dropping_the_reusable_workflows_from_the_filters_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml", '      - ".github/workflows/**"\n', "")
+        self.assert_rejected(".github/workflows/terraform-plan.yaml")
+
+    # ---- check 1: tflint running without a usable config ------------------------
     def test_tflint_without_config_file_is_rejected(self) -> None:
         edit(self.repo / ".github/workflows/terraform-plan.yaml",
              "        env:\n"
              "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n", "")
         self.assert_rejected("runs tflint without TFLINT_CONFIG_FILE")
 
-    # ---- check 4: the manifest and the filters going stale -----------------------
+    def test_an_empty_tflint_config_file_is_rejected(self) -> None:
+        """An empty value leaves tflint looking in its working directory, exactly as if
+        the variable were unset -- so presence of the NAME is not the check."""
+        edit(self.repo / ".github/workflows/terraform-plan.yaml",
+             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
+             '          TFLINT_CONFIG_FILE: ""\n')
+        self.assert_rejected("empty value")
+
+    def test_a_tflint_config_file_pointing_elsewhere_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/terraform-plan.yaml",
+             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
+             "          TFLINT_CONFIG_FILE: /tmp/somewhere-else.json\n")
+        self.assert_rejected("does not point at .tflint.hcl")
+
+    def test_a_step_level_empty_value_overrides_a_valid_job_level_one(self) -> None:
+        """Scope precedence, not mere presence. A step-level empty string wins over a
+        correct job-level value, so a checker that asks 'does the name appear in ANY
+        scope' reports a configured step that is in fact unconfigured."""
+        edit(self.repo / ".github/workflows/terraform-plan.yaml",
+             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
+             '          TFLINT_CONFIG_FILE: ""\n')
+        edit(self.repo / ".github/workflows/terraform-plan.yaml",
+             "    defaults:\n",
+             "    env:\n      TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n\n    defaults:\n")
+        self.assert_rejected("empty value")
+
+    def test_an_unclassifiable_tflint_command_is_rejected_not_ignored(self) -> None:
+        """'Could not parse' is not a pass. `sudo tflint` is a real invocation this
+        script does not model; reading it as 'no tflint here' would silently drop the
+        config check for that step."""
+        edit(self.repo / ".github/workflows/terraform-plan.yaml",
+             "          tflint --init\n          tflint --format compact\n",
+             "          sudo tflint --init\n          sudo tflint --format compact\n")
+        self.assert_rejected("cannot classify as an invocation")
+
+    # ---- check 3/coverage: a job gated off for pull requests is not coverage -----
+    def test_a_plan_job_gated_off_for_pull_requests_is_not_coverage(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml",
+             "    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'\n",
+             "    if: github.event_name == 'push'\n")
+        self.assert_rejected("environments/ad: contains Terraform but no workflow")
+
+    def test_an_unmodelled_if_condition_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml",
+             "    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'\n",
+             "    if: success() && github.event_name == 'pull_request'\n")
+        self.assert_rejected("cannot evaluate")
+
+    # ---- check 5: the manifest, the filters and the directories going stale ------
     def test_exclusion_for_a_directory_that_does_not_exist_is_rejected(self) -> None:
         path = self.repo / checker.EXCLUSIONS_FILE
         doc = json.loads(path.read_text())
@@ -136,8 +207,6 @@ class CheckerSelfTest(unittest.TestCase):
         self.assert_rejected("has no 'reason'")
 
     def test_excluded_but_actually_covered_is_rejected(self) -> None:
-        """An exclusion that has been overtaken by real coverage states a reason that is
-        no longer true, which is the stale-prose class in a manifest."""
         path = self.repo / checker.EXCLUSIONS_FILE
         doc = json.loads(path.read_text())
         doc["excluded"].append({"path": "environments/ad", "reason": "no longer true"})
@@ -149,6 +218,21 @@ class CheckerSelfTest(unittest.TestCase):
              '      - "environments/ad/**"\n',
              '      - "environments/ad/**"\n      - "modules/renamed-away/**"\n')
         self.assert_rejected("matches nothing on disk")
+
+    def test_a_stale_PUSH_filter_is_rejected(self) -> None:
+        """Filters live on push as well as pull_request. Reading only pull_request let a
+        stale push filter silently stop the main-branch plan while the checker reported
+        every filter healthy."""
+        edit(self.repo / ".github/workflows/ad.yaml",
+             "  push:\n    branches:\n      - main\n",
+             '  push:\n    branches:\n      - main\n    paths:\n      - "modules/gone-away/**"\n')
+        self.assert_rejected("matches nothing on disk")
+
+    def test_paths_ignore_on_push_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml",
+             "  push:\n    branches:\n      - main\n",
+             '  push:\n    branches:\n      - main\n    paths-ignore:\n      - "docs/**"\n')
+        self.assert_rejected("paths-ignore is not modelled")
 
     def test_working_directory_that_does_not_exist_is_rejected(self) -> None:
         edit(self.repo / ".github/workflows/ad.yaml",
@@ -165,16 +249,24 @@ class CheckerSelfTest(unittest.TestCase):
              '      - "environments/ad/**"\n      - "modules/*/main.tf"\n')
         self.assert_rejected("glob syntax this script does not model")
 
-    def test_paths_ignore_is_rejected_rather_than_guessed_at(self) -> None:
+    def test_paths_ignore_on_pull_request_is_rejected(self) -> None:
         edit(self.repo / ".github/workflows/ad.yaml",
              "  pull_request:\n    paths:\n",
-             "  pull_request:\n    paths-ignore:\n      - \"docs/**\"\n    paths:\n")
+             '  pull_request:\n    paths-ignore:\n      - "docs/**"\n    paths:\n')
         self.assert_rejected("paths-ignore is not modelled")
 
     def test_unparseable_workflow_is_rejected(self) -> None:
         (self.repo / ".github/workflows/broken.yaml").write_text(
             "name: broken\non:\n  pull_request:\njobs:\n  a: [unclosed\n")
         self.assert_rejected("will not parse as YAML")
+
+    def test_terraform_nested_below_an_inventory_root_is_rejected(self) -> None:
+        """The inventory models immediate children only. A nested directory would be
+        neither covered nor excluded while the invariant claims to cover everything."""
+        nested = self.repo / "modules" / "ec2-windows-workload" / "submodule"
+        nested.mkdir()
+        (nested / "main.tf").write_text('variable "x" { type = string }\n')
+        self.assert_rejected("Terraform nested below modules/ec2-windows-workload")
 
     # ---- vacuity: an empty inventory must not agree with everything ---------------
     def test_empty_inventory_root_is_rejected(self) -> None:
@@ -202,22 +294,38 @@ class TflintInvocationGrammar(unittest.TestCase):
     tflint command removed from it, and the whole coverage model rested on that answer.
     """
 
+    def invokes(self, block: str) -> bool:
+        return checker.classify_run_block(block)[0]
+
+    def unclear(self, block: str) -> list[str]:
+        return checker.classify_run_block(block)[1]
+
     def test_real_invocations_are_detected(self) -> None:
         for block in ("tflint --init\ntflint --format compact\n",
                       "  tflint\n",
                       "cd x && tflint --format compact\n",
-                      "terraform init; tflint\n"):
+                      "terraform init; tflint\n",
+                      "TFLINT_CONFIG_FILE=/x/.tflint.hcl tflint --init\n",
+                      "A=1 B=2 tflint\n"):
             with self.subTest(block=block):
-                self.assertTrue(checker._runs_tflint(block))
+                self.assertTrue(self.invokes(block))
+                self.assertEqual(self.unclear(block), [])
 
     def test_mentions_that_are_not_invocations_are_rejected(self) -> None:
         for block in ("tflint_version: 0.64.0\n",
-                      "echo tflint\n",
-                      "# tflint --init\n",
                       "tflint-wrapper --init\n",
                       "TFLINT_CONFIG_FILE=x true\n"):
             with self.subTest(block=block):
-                self.assertFalse(checker._runs_tflint(block))
+                self.assertFalse(self.invokes(block))
+                self.assertEqual(self.unclear(block), [])
+
+    def test_unmodelled_forms_are_flagged_rather_than_read_as_absent(self) -> None:
+        """The third state. These DO run tflint; the grammar cannot prove it, so they
+        must be reported, not silently treated as 'no tflint in this step'."""
+        for block in ("sudo tflint --init\n", "echo tflint\n", "/usr/local/bin/tflint\n"):
+            with self.subTest(block=block):
+                self.assertFalse(self.invokes(block))
+                self.assertTrue(self.unclear(block), "must be flagged as unclassifiable")
 
     def test_the_repository_has_exactly_one_tflint_step_and_it_is_configured(self) -> None:
         """Anchors the count, so a second unconfigured tflint step cannot arrive quietly."""
@@ -225,9 +333,53 @@ class TflintInvocationGrammar(unittest.TestCase):
         self.assertEqual(problems, [])
         steps = list(checker.tflint_run_steps(workflows))
         self.assertEqual(len(steps), 1, f"expected one tflint step, found {len(steps)}")
-        wf, _, _, envs = steps[0]
+        wf, _, _, envs, unclear = steps[0]
         self.assertEqual(wf["rel"], ".github/workflows/terraform-plan.yaml")
-        self.assertTrue(any("TFLINT_CONFIG_FILE" in scope for scope in envs))
+        self.assertEqual(unclear, [])
+        value = checker.resolve_env(envs, "TFLINT_CONFIG_FILE")
+        self.assertTrue(value and value.strip().endswith(checker.TFLINT_CONFIG))
+
+
+class ConditionEvaluator(unittest.TestCase):
+    """The `if:` subset, both directions."""
+
+    PR = checker.PULL_REQUEST_CONTEXT
+
+    def test_conditions_true_for_a_pull_request(self) -> None:
+        for expr in ("github.event_name == 'pull_request'",
+                     "github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'",
+                     "${{ github.event_name == 'pull_request' }}",
+                     "github.event_name != 'push'",
+                     "(github.event_name == 'push' || github.event_name == 'pull_request')"):
+            with self.subTest(expr=expr):
+                self.assertTrue(checker.evaluate_condition(expr, self.PR))
+
+    def test_conditions_false_for_a_pull_request(self) -> None:
+        for expr in ("github.event_name == 'push'",
+                     "github.ref == 'refs/heads/main'",
+                     "github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')",
+                     "github.event_name == 'push' && github.event_name == 'pull_request'"):
+            with self.subTest(expr=expr):
+                self.assertFalse(checker.evaluate_condition(expr, self.PR))
+
+    def test_the_real_ad_yaml_conditions_evaluate_as_observed(self) -> None:
+        """Ground the evaluator in the file it judges, and in what actually happened:
+        plan-ad DID run on PR #40, apply-ad did not."""
+        import yaml
+        doc = yaml.safe_load((REPO / ".github/workflows/ad.yaml").read_text())
+        jobs = doc["jobs"]
+        self.assertTrue(checker.evaluate_condition(jobs["plan-ad"]["if"], self.PR))
+        self.assertFalse(checker.evaluate_condition(jobs["apply-ad"]["if"], self.PR))
+
+    def test_unmodelled_expressions_raise_rather_than_defaulting(self) -> None:
+        for expr in ("success()",
+                     "github.actor == 'someone'",
+                     "!cancelled()",
+                     "github.event_name == \"pull_request\"",
+                     "github.event_name == 'pull_request' && ("):
+            with self.subTest(expr=expr):
+                with self.assertRaises(checker.Unsupported):
+                    checker.evaluate_condition(expr, self.PR)
 
 
 class MatcherSemantics(unittest.TestCase):
@@ -242,8 +394,8 @@ class MatcherSemantics(unittest.TestCase):
         self.assertFalse(checker.matches("modules/a/**", "modules/b/main.tf"))
 
     def test_literal_pattern_matches_exactly(self) -> None:
-        self.assertTrue(checker.matches("a/b.tf", "a/b.tf"))
-        self.assertFalse(checker.matches("a/b.tf", "a/b.tf.bak"))
+        self.assertTrue(checker.matches(".tflint.hcl", ".tflint.hcl"))
+        self.assertFalse(checker.matches(".tflint.hcl", ".tflint.hcl.bak"))
         self.assertFalse(checker.matches("a/b.tf", "a/b.tf/c"))
 
     def test_covers_dir_is_true_only_for_the_named_directory(self) -> None:
@@ -264,7 +416,7 @@ class MatcherSemantics(unittest.TestCase):
         doc = yaml.safe_load("on:\n  pull_request:\n    paths:\n      - \"x/**\"\n")
         self.assertIn(True, doc, "precondition: PyYAML must still fold `on` to the boolean")
         self.assertNotIn("on", doc)
-        self.assertEqual(checker.pr_filters(doc), (True, ["x/**"]))
+        self.assertEqual(checker.trigger_filters(doc, "pull_request"), (True, ["x/**"]))
 
 
 if __name__ == "__main__":

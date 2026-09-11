@@ -4,11 +4,12 @@ This repo runs Terraform through GitHub Actions. Pipelines are split into two la
 
 - **Entrypoint workflows** — one per environment. They own the triggers (push, PR, manual) and
   wire together the reusable jobs. Today only `ad.yaml` exists.
-- **Repository-wide checks** — `ci-coverage.yaml`, deliberately unfiltered. Every other workflow
-  here has a `paths:` list, so a new `environments/*` or `modules/*` directory matches nobody's
-  filters and passes CI by never being looked at. This one runs on every pull request and fails
-  if any Terraform directory is neither covered by a workflow nor recorded as a deliberate
-  exclusion. See [Coverage](#coverage-every-terraform-directory-is-linted).
+- **Repository-wide checks** — `ci-coverage.yaml`, deliberately unfiltered. Every *entrypoint*
+  workflow has a `paths:` list (the reusable workflows have no triggers of their own at all), so
+  a new `environments/*` or `modules/*` directory matches nobody's filters and passes CI by never
+  being looked at. This one runs on every pull request and fails if any Terraform directory is
+  neither covered by a workflow nor recorded as a deliberate exclusion. See
+  [Coverage](#coverage-every-terraform-directory-is-linted).
 - **Reusable workflows** — `terraform-validate`, `terraform-plan`, `terraform-apply`,
   `terraform-destroy`. They are `workflow_call`-only building blocks and are never run directly
   from the Actions tab (with one caveat noted under [Destroy](#destroy)).
@@ -110,7 +111,7 @@ Key behaviours:
 
 | Event | What runs | Notes |
 |---|---|---|
-| PR touching any path in `ad.yaml`'s `paths:` list | `coverage` + `validate-ad` | Format check. Plan and apply are skipped because the ref is not `refs/heads/main`. The filter list is **not** restated here — read it from `ad.yaml`, which is the only place it is maintained. |
+| PR touching any path in `ad.yaml`'s `paths:` list | `coverage` + `validate-ad` → `plan-ad` | `plan-ad` **does** run on pull requests (`ad.yaml`'s `if:` admits `pull_request`), so the plan and its tflint step execute and the plan is posted to the PR. Only `apply-ad` is skipped, because its `if:` requires `refs/heads/main`. The filter list is **not** restated here — read it from `ad.yaml`, which is the only place it is maintained. |
 | PR touching anything else | `coverage` only | `ad.yaml`'s `pull_request` trigger is path-filtered; `ci-coverage.yaml`'s is not, so it runs on every pull request. |
 | Push to `main` (merge included) | `validate-ad` → `plan-ad` → `apply-ad` | **No path filter on `push`.** Any commit landing on `main` runs the full AD pipeline, even a README-only change. |
 
@@ -224,8 +225,30 @@ only ever runs for a directory some entrypoint points it at, and only when that 
   that state despite being consumed by `environments/ad/main.tf`.
 
 `ci-coverage.yaml` runs `.github/scripts/check_terraform_ci_coverage.py` on every pull request,
-with no path filter of its own, and fails on either. It also fails if a step runs tflint without
-`TFLINT_CONFIG_FILE`.
+with no path filter of its own. It enforces six things:
+
+1. **Config** — every step that runs tflint resolves `TFLINT_CONFIG_FILE` to the root
+   `.tflint.hcl`. Presence of the name is not enough: scope precedence is resolved, and an empty
+   value or one pointing elsewhere fails, because both leave tflint reading its working directory
+   exactly as if the variable were unset.
+2. **Coverage** — every Terraform directory is covered or excluded, never neither and never both.
+3. **Dependency** — a workflow that plans an environment filters on every module that environment
+   consumes, derived from the environment's own `source` lines.
+4. **Shared inputs** — a workflow that plans anything also filters on `.tflint.hcl` and on every
+   reusable workflow it calls. Without this a pull request changing the linting runs no lint.
+5. **Staleness** — every filter (on `push` as well as `pull_request`), every `working_directory`
+   and every exclusion still names something that exists.
+6. **Vacuity** — the inventory roots exist and are non-empty, and something actually runs tflint.
+
+Coverage is deliberately not inferred from a path filter alone. A filter matching a module that no
+planned environment consumes triggers a run that never loads that module, so it is not coverage. A
+plan job whose `if:` is false for pull requests is not coverage either — the condition is evaluated,
+not ignored.
+
+Anything the script cannot model — `paths-ignore`, an unsupported glob, an `if:` outside its small
+expression subset, a tflint invoked in a form its grammar does not recognise, Terraform nested below
+an inventory root, an unparseable workflow — **fails**. A checker has three outcomes, and the third
+one quietly joining "pass" is the defect class this whole thing exists to prevent.
 
 ### Why tflint needs `TFLINT_CONFIG_FILE`
 

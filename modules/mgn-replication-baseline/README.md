@@ -262,7 +262,6 @@ Create a role with the following assume policy:
 - [ ] AWS account with MGN enabled
 - [ ] VPC with private subnets (shared with AD)
 - [ ] On-premises network CIDR documented
-- [ ] Target VPC CIDR ranges known
 - [ ] (Optional) Direct Connect VIF ID and BGP ASN
 - [ ] (Optional) Customer-managed KMS key ARN for EBS encryption
 

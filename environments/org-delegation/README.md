@@ -60,10 +60,22 @@ removing the entry fails the check rather than leaving a stale reason behind.
 changing it, with the repository-root config so the AWS ruleset actually loads:
 
 ```console
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
 terraform fmt -recursive -check .
-TFLINT_CONFIG_FILE=<repo root>/.tflint.hcl tflint --init
-TFLINT_CONFIG_FILE=<repo root>/.tflint.hcl tflint --format compact
+
+export TFLINT_CONFIG_FILE="$REPO_ROOT/.tflint.hcl"
+tflint --init
+tflint --format compact
+
+# validate needs providers, so it needs an init first. -backend=false avoids
+# touching the state bucket when all you want is to check the configuration.
+terraform init -backend=false -input=false
+terraform validate
 ```
+
+All four must pass. `terraform plan` additionally needs management-account credentials --
+see [Applying](#applying) below.
 
 ## State
 

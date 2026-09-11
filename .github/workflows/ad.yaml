@@ -19,6 +19,11 @@ on:
       - "modules/ec2-windows-workload/**"
       - "modules/mgn-replication-baseline/**"
       - "modules/ssm-session-access-policy/**"
+      # Shared inputs that change what this pipeline DOES. Without them a PR editing the
+      # lint config or the reusable workflow runs no plan and no tflint, so the change to
+      # the checking itself is never exercised by the thing it checks.
+      - ".tflint.hcl"
+      - ".github/workflows/**"
 
 permissions:
   contents: read

@@ -34,7 +34,9 @@ mgn_staging_az = "us-east-1a"
 mgn_staging_subnet_cidr = "10.0.100.0/24"
 
 # Network Configuration
-# IMPORTANT: Update these with your actual on-prem and target VPC CIDRs
+# IMPORTANT: Update this with your actual on-prem network CIDR.
+# The target VPC needs no CIDR setting here -- the staging subnet is created from
+# mgn_staging_subnet_cidr above, inside the VPC this environment already targets.
 mgn_source_vpc_cidr_blocks = ["10.0.0.0/8"]        # On-prem network
 
 # Cross-Account Configuration (update after other accounts are ready)
