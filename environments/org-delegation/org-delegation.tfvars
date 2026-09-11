@@ -8,4 +8,6 @@ service_principals = [
 ]
 
 # delegated_administrator_account_id is deliberately NOT set here: this repo is public.
-# Supply it via the TF_VAR_EXTRAS secret or -var at apply time.
+# Supply it directly -- export TF_VAR_delegated_administrator_account_id=<id>, or
+# -var. Not via TF_VAR_EXTRAS: that is decoded only by the reusable workflows, and
+# this directory has none.

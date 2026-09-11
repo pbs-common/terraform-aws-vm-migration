@@ -5,8 +5,16 @@ variable "aws_region" {
 }
 
 # Intentionally has NO default and is NOT set in the committed .tfvars: this repo is
-# public and has never committed a real AWS account ID. Supply it at apply time via
-# the TF_VAR_EXTRAS secret ({"delegated_administrator_account_id":"..."}) or -var.
+# public and has never committed a real AWS account ID.
+#
+# Supply it directly, as the README's worked example does:
+#
+#     export TF_VAR_delegated_administrator_account_id=<member account id>
+#     # or: terraform plan -var delegated_administrator_account_id=<id>
+#
+# NOT via TF_VAR_EXTRAS. That secret is a JSON blob decoded into TF_VAR_* by the
+# reusable plan/apply workflows, and this directory deliberately has no workflow
+# (see README) -- so nothing would decode it and the variable would stay unset.
 variable "delegated_administrator_account_id" {
   description = "Member account registered as the MGN delegated administrator (pbs-sdo-shared-workspace)."
   type        = string

@@ -107,5 +107,10 @@ deliberately a single account.
 `pbs-common/terraform-aws-vm-migration` is public and has never committed a real 12-digit
 AWS account ID -- every ID in the tree is a `123456789012`-style placeholder. This
 directory keeps that property: `delegated_administrator_account_id` has no default and is
-absent from the committed `.tfvars`, so it must come from `TF_VAR_EXTRAS` or `-var`. A
-missing value fails the plan rather than silently defaulting to the wrong account.
+absent from the committed `.tfvars`. Supply it the way the worked example above does --
+`export TF_VAR_delegated_administrator_account_id=<id>`, or `-var` -- and a missing value
+fails the plan rather than silently defaulting to the wrong account.
+
+Not via `TF_VAR_EXTRAS`: that secret is decoded into `TF_VAR_*` by the reusable
+plan/apply workflows, and this directory deliberately has none, so nothing would decode
+it and the variable would stay unset.
