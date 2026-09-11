@@ -9,8 +9,10 @@ Two `aws_organizations_delegated_administrator` registrations, both delegated to
 
 | Service principal | Why AWS Transform needs it | Live as of 2026-09-11 |
 |---|---|---|
-| `mgn.amazonaws.com` | Administer Application Migration Service from a member account | Registered by hand, **imported** by this code |
-| `member.org.stacksets.cloudformation.amazonaws.com` | Transform deploys through StackSets with `CallAs: DELEGATED_ADMIN` | Not yet registered, **created** by this code |
+| `mgn.amazonaws.com` | Administer Application Migration Service from a member account | Registered by hand 2026-09-11 09:35:55 -04:00, **imported** by this code |
+| `member.org.stacksets.cloudformation.amazonaws.com` | Transform deploys through StackSets with `CallAs: DELEGATED_ADMIN` | **Created by this code** on apply, 2026-09-11 10:03:05 -04:00 |
+
+Both are live and ACTIVE. This directory has been applied.
 
 This lets migration operators administer MGN from a member account instead of the
 management account, which is what the MGN and AWS Transform guides both recommend:
@@ -33,32 +35,51 @@ explicitly rather than inherited from this change.
 
 ## State
 
-Nothing has been applied from this directory yet -- the registration was made by hand
-first and this code adopts it. It has **no backend state object yet**; pick a bucket/key
-at `terraform init` time, consistent with the other environments.
+Applied 2026-09-11. State lives in the management account's existing Terraform state
+bucket:
+
+    bucket  pbs-master-tfstate
+    key     terraform-aws-vm-migration/org-delegation.tfstate
+    region  us-east-1
+
+That bucket is versioned and SSE-AES256, and is the management account's established
+state location -- it already holds `aws-organization-account-mgmt`,
+`aws-organizations-non-negotiables`, `aws-entra-sso-groups/*` and similar. The key
+follows its `<repo>/<component>.tfstate` convention.
+
+This choice was made to get the StackSets delegation applied and is easy to revisit:
+moving it means `terraform init -migrate-state` to a new bucket/key, with no change to
+the live registrations.
 
 ## Applying
 
+Credentials must be in the management account. pbs-login is the STS bastion --
+`arn:aws:iam::<management account>:role/pbs-admin` trusts it, which is how this was
+applied:
+
 ```console
-export AWS_PROFILE=<management-account admin profile>
+aws sts assume-role \
+  --role-arn arn:aws:iam::<management account>:role/pbs-admin \
+  --role-session-name <your session> \
+  --profile pbs-login/AdministratorAccess
+# export the returned credentials, then:
+
 export TF_VAR_delegated_administrator_account_id=<member account id>
 
 terraform init \
-  -backend-config="bucket=<state bucket>" \
-  -backend-config="key=org-delegation/terraform.tfstate" \
+  -backend-config="bucket=pbs-master-tfstate" \
+  -backend-config="key=terraform-aws-vm-migration/org-delegation.tfstate" \
   -backend-config="region=us-east-1"
 
 terraform plan -var-file org-delegation.tfvars
 ```
 
-The first plan should report **1 to import, 1 to add, 0 to change, 0 to destroy**: the MGN
-registration already exists and is adopted, the StackSets one does not yet exist and is
-created. Anything else means the live state has drifted from what this code describes --
-read the plan before applying it.
+**A plan today should report no changes.** Both registrations are in state and live.
 
-Applying this directory is therefore what actually creates the StackSets delegation. Until
-someone runs that apply, AWS Transform's StackSets deployments will not work from this
-account.
+For the record, the first plan -- run before the apply -- reported **1 to import, 1 to
+add, 0 to change, 0 to destroy**: MGN adopted, StackSets created. If a future plan wants
+to add or destroy either registration, the live delegation has drifted from this code;
+read the plan before applying it.
 
 ## Note: StackSets is delegated to other accounts too
 
