@@ -155,7 +155,15 @@ class CheckerSelfTest(unittest.TestCase):
         edit(self.repo / ".github/workflows/terraform-plan.yaml",
              "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
              "          TFLINT_CONFIG_FILE: /tmp/somewhere-else.json\n")
-        self.assert_rejected("does not point at .tflint.hcl")
+        self.assert_rejected("not a recognised spelling")
+
+    def test_the_same_basename_in_a_DIFFERENT_directory_is_rejected(self) -> None:
+        """A suffix test passed /tmp/.tflint.hcl, which loads a different config with no
+        AWS plugin while the guard reported success. The basename is not the check."""
+        edit(self.repo / ".github/workflows/terraform-plan.yaml",
+             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
+             "          TFLINT_CONFIG_FILE: /tmp/.tflint.hcl\n")
+        self.assert_rejected("not a recognised spelling")
 
     def test_a_step_level_empty_value_overrides_a_valid_job_level_one(self) -> None:
         """Scope precedence, not mere presence. A step-level empty string wins over a
@@ -227,6 +235,23 @@ class CheckerSelfTest(unittest.TestCase):
              "  push:\n    branches:\n      - main\n",
              '  push:\n    branches:\n      - main\n    paths:\n      - "modules/gone-away/**"\n')
         self.assert_rejected("matches nothing on disk")
+
+    def test_a_stale_filter_in_a_PUSH_ONLY_workflow_is_rejected(self) -> None:
+        """Staleness must not be gathered only from workflows that turn out to be
+        callers. A push-only workflow was discarded before its filters were examined, so
+        a stale filter there was never checked while the guarantee said otherwise."""
+        (self.repo / ".github/workflows/push-only.yaml").write_text(
+            "name: push only\n"
+            "on:\n"
+            "  push:\n"
+            "    branches: [main]\n"
+            '    paths:\n      - "modules/vanished/**"\n'
+            "jobs:\n"
+            "  noop:\n"
+            "    runs-on: ubuntu-latest\n"
+            "    steps:\n"
+            "      - run: echo hi\n")
+        self.assert_rejected("paths filter 'modules/vanished/**' matches nothing on disk")
 
     def test_paths_ignore_on_push_is_rejected(self) -> None:
         edit(self.repo / ".github/workflows/ad.yaml",

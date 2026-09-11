@@ -73,11 +73,12 @@ flowchart TD
     T{Trigger}
     T -->|"pull_request<br/>(path-filtered)"| V1[validate-ad<br/>terraform fmt -check]
     T -->|push to main| V2[validate-ad]
-    T -->|workflow_dispatch| V2
+    T -->|workflow_dispatch| V3[validate-ad]
 
-    V1 --> STOP[Plan and apply skipped<br/>ref is not refs/heads/main]
+    V2 --> STOP["plan-ad SKIPPED<br/>its if: admits only<br/>pull_request / workflow_dispatch<br/>apply-ad needs plan-ad, so it is skipped too"]
 
-    V2 --> P[plan-ad<br/>environment: ad]
+    V1 --> P[plan-ad<br/>environment: ad]
+    V3 --> P
     P --> P1[Assume OIDC role in AD account]
     P1 --> P2[tflint]
     P2 --> P3["terraform init<br/>(S3 backend, partial config)"]
@@ -86,7 +87,8 @@ flowchart TD
     P5 --> P6["terraform plan --var-file ad.tfvars<br/>-out=tfplan"]
     P6 --> P7["Upload artifact terraform-plan-ad<br/>(7 day retention)"]
 
-    P7 --> G{"Environment 'ad'<br/>protection rules"}
+    P7 --> PR["Post plan to the PR<br/>(pull_request only)"]
+    PR --> G{"Environment 'ad'<br/>protection rules"}
     G -->|Approval required| W[Job waits for reviewer]
     G -->|No rules| A
     W --> A[apply-ad<br/>environment: ad]
@@ -113,10 +115,20 @@ Key behaviours:
 |---|---|---|
 | PR touching any path in `ad.yaml`'s `paths:` list | `coverage` + `validate-ad` → `plan-ad` | `plan-ad` **does** run on pull requests (`ad.yaml`'s `if:` admits `pull_request`), so the plan and its tflint step execute and the plan is posted to the PR. Only `apply-ad` is skipped, because its `if:` requires `refs/heads/main`. The filter list is **not** restated here — read it from `ad.yaml`, which is the only place it is maintained. |
 | PR touching anything else | `coverage` only | `ad.yaml`'s `pull_request` trigger is path-filtered; `ci-coverage.yaml`'s is not, so it runs on every pull request. |
-| Push to `main` (merge included) | `validate-ad` → `plan-ad` → `apply-ad` | **No path filter on `push`.** Any commit landing on `main` runs the full AD pipeline, even a README-only change. |
+| Push to `main` (merge included) | `coverage` + `validate-ad` only | **No path filter on `push`**, so any commit landing on `main` runs the format check — but `plan-ad` and `apply-ad` are both **skipped**, measured on runs `34616951644` and `34502047308`. See the known gap below. |
+| `workflow_dispatch` from `main` | `validate-ad` → `plan-ad` → `apply-ad` | The only path that currently reaches `apply-ad`. |
 
-Because plan does not run on pull requests, the "Post Plan to PR" step in `terraform-plan.yaml`
-never fires today. The plan you review is the one in the post-merge run on `main`.
+`plan-ad` runs on pull requests, so the "Post Plan to PR" step in `terraform-plan.yaml` does fire
+and the plan you review is the one on the pull request itself.
+
+**Known gap, pre-existing and not addressed here.** `plan-ad`'s `if:` admits only `pull_request`
+and `workflow_dispatch`, so it is skipped on `push` — and `apply-ad` declares `needs: plan-ad`, so
+a skipped plan skips the apply with it. Measured on two consecutive pushes to `main`
+(runs `34616951644` and `34502047308`): `Plan AD Environment` skipped, `Apply AD Environment`
+skipped. **Merging to `main` therefore applies nothing**; the only path that reaches `apply-ad`
+today is `workflow_dispatch` from `main`. Whether the intent is "apply on merge" or "apply only
+on demand" is a deployment decision, so it is deliberately left alone by this pull request rather
+than changed in a linting change.
 
 ---
 

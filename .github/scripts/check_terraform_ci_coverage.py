@@ -69,6 +69,18 @@ WORKFLOW_DIR = Path(".github/workflows")
 EXCLUSIONS_FILE = Path(".github/terraform-ci-coverage-exclusions.json")
 TFLINT_CONFIG = ".tflint.hcl"
 
+# The only accepted spellings of "the repository-root tflint config", as a workflow would
+# write them. A SUFFIX test is not enough and was a real hole: `/tmp/.tflint.hcl` ends in
+# the right basename and loads a completely different config, with no AWS plugin, while
+# the check reported success. Matching the exact supported expressions means a new but
+# legitimate spelling fails loudly and gets added here, rather than an illegitimate one
+# passing quietly.
+ROOT_CONFIG_VALUES = (
+    "${{ github.workspace }}/" + TFLINT_CONFIG,
+    "$GITHUB_WORKSPACE/" + TFLINT_CONFIG,
+    TFLINT_CONFIG,
+)
+
 # Triggers that can carry path filters and can therefore decide whether a plan runs.
 # Enumerated rather than assumed: the first version of this script read only
 # `pull_request`, so a stale `push.paths` filter could stop the main-branch plan while
@@ -524,10 +536,14 @@ def tflint_config_problems(workflows: list[dict]) -> list[str]:
                 f"{where} sets TFLINT_CONFIG_FILE to an empty value, which leaves tflint "
                 f"looking in its working directory exactly as if the variable were unset"
             )
-        elif not str(value).strip().endswith(TFLINT_CONFIG):
+        elif str(value).strip() not in ROOT_CONFIG_VALUES:
             problems.append(
-                f"{where} sets TFLINT_CONFIG_FILE to {value!r}, which does not point at "
-                f"{TFLINT_CONFIG}. Only the repository-root config declares the AWS plugin"
+                f"{where} sets TFLINT_CONFIG_FILE to {value!r}, which is not a recognised "
+                f"spelling of the repository-root {TFLINT_CONFIG}. Only the root config "
+                f"declares the AWS plugin, and a same-named file elsewhere would load a "
+                f"different ruleset while looking correct. Accepted: "
+                f"{', '.join(ROOT_CONFIG_VALUES)} -- add a spelling there if a legitimate "
+                f"one is missing"
             )
     return problems
 
@@ -639,17 +655,23 @@ def run(repo: Path) -> list[str]:
     failures.extend(tflint_config_problems(workflows))
 
     # ---- gather callers, refusing anything unmodelled -------------------------------
+    # Staleness is collected for EVERY workflow, not only the ones that turn out to be
+    # callers. Gathering it inside the caller loop meant a push-only workflow was dropped
+    # before its filters were ever examined, so a stale `push.paths` there could stop the
+    # main-branch plan while check 5 reported every filter healthy -- the same "discarded
+    # before it was checked" shape the caller list is meant to avoid.
+    filter_patterns: list[tuple[str, str]] = []
     callers = []
     for wf in workflows:
         try:
             has_pr, pr_paths = trigger_filters(wf["doc"], "pull_request")
-            all_patterns: list[str] = []
             for trigger in CHANGE_TRIGGERS:
                 present, patterns = trigger_filters(wf["doc"], trigger)
-                if present:
-                    all_patterns.extend(patterns)
-            for pattern in all_patterns:
-                _match_prefix(pattern)
+                if not present:
+                    continue
+                for pattern in patterns:
+                    _match_prefix(pattern)
+                    filter_patterns.append((wf["rel"], pattern))
         except Unsupported as exc:
             failures.append(f"{wf['rel']}: {exc}")
             continue
@@ -661,7 +683,6 @@ def run(repo: Path) -> list[str]:
             "rel": wf["rel"],
             "doc": wf["doc"],
             "filters": pr_paths,
-            "all_patterns": all_patterns,
             "planned": planned,
         })
 
@@ -751,15 +772,15 @@ def run(repo: Path) -> list[str]:
 
     # ---- check 5: nothing listed anywhere has gone stale ----------------------------
     on_disk = set(tf_dirs)
+    for rel, pattern in filter_patterns:
+        literal, recursive = _match_prefix(pattern)
+        target = repo / literal
+        if not (target.is_dir() if recursive else target.exists()):
+            failures.append(
+                f"{rel}: paths filter {pattern!r} matches nothing on disk. A filter "
+                f"pointing at a renamed or deleted path silently covers nothing"
+            )
     for caller in callers:
-        for pattern in caller["all_patterns"]:
-            literal, recursive = _match_prefix(pattern)
-            target = repo / literal
-            if not (target.is_dir() if recursive else target.exists()):
-                failures.append(
-                    f"{caller['rel']}: paths filter {pattern!r} matches nothing on disk. A "
-                    f"filter pointing at a renamed or deleted path silently covers nothing"
-                )
         for wd in caller["planned"]:
             directory = repo / wd
             if not directory.is_dir() or not any(directory.glob("*.tf")):
