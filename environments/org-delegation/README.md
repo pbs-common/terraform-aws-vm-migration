@@ -14,6 +14,15 @@ Two `aws_organizations_delegated_administrator` registrations, both delegated to
 
 Both are live and ACTIVE. This directory has been applied.
 
+**Both principals are required and `service_principals` enforces it.** Extras are
+allowed, so a future Transform prerequisite needs no code change, but neither of these
+two can be dropped. That is a validation rather than a convention because the two
+failure modes are not equally visible: dropping `mgn.amazonaws.com` fails the plan with
+an import-target error, while dropping the StackSets principal **succeeds** and reports
+`0 to add, 0 to change, 1 to destroy` -- deregistering the live delegation and breaking
+Transform's deployments with a zero exit code. Found by Copilot review on this PR and
+confirmed by running both cases.
+
 This lets migration operators administer MGN from a member account instead of the
 management account, which is what the MGN and AWS Transform guides both recommend:
 
