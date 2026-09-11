@@ -115,6 +115,47 @@ add, 0 to change, 0 to destroy**: MGN adopted, StackSets created. If a future pl
 to add or destroy either registration, the live delegation has drifted from this code;
 read the plan before applying it.
 
+## Organizations resource-based delegation policy
+
+`resource-policy.tf` also manages an **organization resource policy** granting the
+delegated administrator account the Organizations read actions from AWS's documented
+[View organization, OUs, accounts, and policies](https://docs.aws.amazon.com/organizations/latest/userguide/security_iam_resource-based-policy-examples.html)
+example -- that action list exactly, and nothing beyond it.
+
+**This is hardening, not a fix, and the distinction matters.** It was added while
+diagnosing an empty MGN Global View "Linked accounts" panel, but measurement on
+2026-09-11 -- before the policy existed -- showed that **every** Organizations read API
+already succeeded from the delegated administrator, because delegated-administrator
+status itself grants Organizations read-only access:
+
+    DescribeOrganization, ListAccounts, DescribeAccount (self and other), ListRoots,
+    ListParents, ListChildren, ListOrganizationalUnitsForParent, ListTagsForResource,
+    ListDelegatedAdministrators, ListDelegatedServicesForAccount,
+    ListAWSServiceAccessForOrganization                              -- all OK
+
+So the policy changed no measured behaviour. It makes the grant explicit and reviewable
+instead of implicit. **Do not record it as the remedy for Global View**, whose denial is
+on the MGN side (`mgn:DescribeSourceServers --account-id <sibling>` fails with an
+explicit deny in a resource-based policy) and reproduces from the management account
+too, where no delegation policy can apply.
+
+**An organization has exactly ONE resource policy.** The API is `PutResourcePolicy`,
+which *replaces* the whole document rather than merging. This resource therefore owns
+it. Any future delegation -- backup policies, tag policies, SCP management -- must be
+added to the statements in `resource-policy.tf`, never applied separately, or one will
+silently erase the other.
+
+Recovery from lost state differs from the registrations above: the AWS provider ships
+**no data source** for the organization resource policy (checked against the 6.62.0
+provider schema), so the import cannot be derived from live state. It is opt-in instead,
+and empty on every normal run:
+
+    terraform plan -var existing_resource_policy_id=rp-xxxxxxxx
+
+Find the id with `aws organizations describe-resource-policy --query
+'ResourcePolicy.ResourcePolicySummary.Id' --output text`. Leaving it empty can only
+cause a create, which `PutResourcePolicy` semantics make safe to repeat.
+
 ## Note: StackSets is delegated to other accounts too
 
 `member.org.stacksets.cloudformation.amazonaws.com` was already registered to three other
