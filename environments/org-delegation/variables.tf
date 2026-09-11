@@ -23,12 +23,16 @@ variable "delegated_administrator_account_id" {
 # Both principals are REQUIRED, and the validation below enforces it. Extras are
 # allowed, so a future Transform prerequisite can be added without a code change.
 #
-# Narrowing this set is not a harmless configuration choice -- each principal fails
-# in its own way, and one of them fails silently:
+# Narrowing this set is not a harmless configuration choice. Since the import block
+# in main.tf now uses for_each over THIS variable, it follows whatever is set here,
+# so nothing downstream objects -- BOTH failure modes are silent, and this validation
+# is the only thing standing between a narrowed set and real damage:
 #
 #   without mgn.amazonaws.com
-#       the import block in main.tf targets that for_each instance, so the plan
-#       dies with "Configuration for import target does not exist"
+#       plan reports "1 to import, 0 to add" and exits 0. MGN simply drops out of
+#       management: still registered in AWS, no longer described by any code.
+#       (An earlier static import block made this a hard error by accident; moving
+#       to for_each removed that accidental guard, which is why this is explicit.)
 #   without member.org.stacksets.cloudformation.amazonaws.com
 #       the plan SUCCEEDS and reports "0 to add, 0 to change, 1 to destroy" --
 #       it deregisters the live StackSets delegation and breaks AWS Transform's

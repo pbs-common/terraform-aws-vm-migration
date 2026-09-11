@@ -60,3 +60,19 @@ import {
   id = "123456789012/mgn.amazonaws.com"
 }
 ```
+
+**Importing more than one principal? Use a single `for_each` import block, not one
+static block each.** Measured on Terraform 1.16.0: of several static import blocks
+targeting instances of the same `for_each` resource, only the **first** is honoured --
+silently, with no error or warning, while the rest plan as `will be created` and then
+fail on apply with `AccountAlreadyRegisteredException`. Correct on 1.14.6 and 1.15.8;
+the `for_each` form below is correct on all three.
+
+```hcl
+import {
+  for_each = var.service_principals
+
+  to = module.mgn_delegation.aws_organizations_delegated_administrator.this[each.value]
+  id = "${var.delegated_administrator_account_id}/${each.value}"
+}
+```

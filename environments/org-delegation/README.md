@@ -16,12 +16,18 @@ Both are live and ACTIVE. This directory has been applied.
 
 **Both principals are required and `service_principals` enforces it.** Extras are
 allowed, so a future Transform prerequisite needs no code change, but neither of these
-two can be dropped. That is a validation rather than a convention because the two
-failure modes are not equally visible: dropping `mgn.amazonaws.com` fails the plan with
-an import-target error, while dropping the StackSets principal **succeeds** and reports
-`0 to add, 0 to change, 1 to destroy` -- deregistering the live delegation and breaking
-Transform's deployments with a zero exit code. Found by Copilot review on this PR and
-confirmed by running both cases.
+two can be dropped. It is a validation rather than a convention because **both failure
+modes are silent** -- neither produces an error, and the validation is the only thing
+between a narrowed set and real damage:
+
+| Narrowed to | Plan | Consequence |
+|---|---|---|
+| StackSets only | `1 to import, 0 to add`, exit 0 | MGN drops out of management: still registered in AWS, described by no code |
+| MGN only | `0 to add, 0 to change, 1 to destroy`, exit 0 | The live StackSets delegation is **deregistered**, breaking Transform's deployments |
+
+Found by Copilot review on this PR and confirmed by running both cases. Note the first
+row used to fail loudly, because a static import block named MGN explicitly; moving to a
+`for_each` import block removed that accidental guard, so the validation now carries it.
 
 This lets migration operators administer MGN from a member account instead of the
 management account, which is what the MGN and AWS Transform guides both recommend:
@@ -98,9 +104,12 @@ registrations are **not** managed here. AWS permits multiple StackSets delegated
 administrators, so adding this account does not displace them, and this state file must
 never be allowed to think it owns them.
 
-If a future change needs to manage those too, add them as separate module instances with
-their own import blocks. Do not widen `delegated_administrator_account_id`; it is
-deliberately a single account.
+If a future change needs to manage those too, add them as separate module instances,
+each with its own `for_each` import block. Do not widen
+`delegated_administrator_account_id`; it is deliberately a single account. And prefer a
+`for_each` import block over several static ones in every case -- see the note in
+`main.tf`: Terraform 1.16.0 silently honours only the first of several static import
+blocks aimed at one `for_each` resource.
 
 ## Account IDs and this public repository
 
