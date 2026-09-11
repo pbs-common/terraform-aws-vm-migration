@@ -41,3 +41,53 @@ jobs:
 
       - name: Check every Terraform directory is linted by CI
         run: python .github/scripts/check_terraform_ci_coverage.py
+
+  # Lints EVERY Terraform directory, in the directory itself. This is separate from the
+  # plan pipeline on purpose, and it is not a duplicate of it: planning an environment
+  # does NOT lint the modules it consumes. Measured with duplicate map keys reintroduced
+  # into modules/mgn-replication-baseline --
+  #     tflint from environments/ad (which consumes it)   exit 0
+  #     tflint in the module directory                    exit 2
+  # tflint reports only child-module issues tied to passed variables and its syntax rules
+  # do not descend, so a module is linted only by running tflint where the module lives.
+  #
+  # It needs no AWS credentials, which is why it can cover directories the plan pipeline
+  # deliberately cannot -- environments/org-delegation included.
+  #
+  # The directory list is NOT written out here. It comes from the same enumeration the
+  # coverage check uses, so the two cannot disagree about which directories exist.
+  lint:
+    name: tflint every Terraform directory
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install "pyyaml==6.0.3"
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: "0.64.0"
+
+      - name: Run TFLint in every Terraform directory
+        env:
+          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl
+        run: |
+          set -u
+          FAILED=0
+          for d in $(python .github/scripts/check_terraform_ci_coverage.py --list-dirs); do
+            echo "::group::$d"
+            ( cd "$d" && tflint --init && tflint --format compact ) || FAILED=1
+            echo "::endgroup::"
+          done
+          if [ "$FAILED" -ne 0 ]; then
+            echo "tflint reported problems in at least one directory"
+            exit 1
+          fi

@@ -251,6 +251,24 @@ with no path filter of its own. It enforces six things:
 5. **Staleness** — every filter (on `push` as well as `pull_request`), every `working_directory`
    and every exclusion still names something that exists.
 6. **Vacuity** — the inventory roots exist and are non-empty, and something actually runs tflint.
+7. **Direct lint** — an unfiltered workflow runs tflint *in each Terraform directory*, driven by
+   `check_terraform_ci_coverage.py --list-dirs` so the lint loop and the coverage check share one
+   enumeration.
+
+**Planning an environment does not lint the modules it consumes**, which is why check 7 exists and
+why the `lint` job is separate from the plan pipeline rather than a duplicate of it. Measured with
+duplicate map keys reintroduced into `modules/mgn-replication-baseline`:
+
+    tflint from environments/ad (which consumes it)   exit 0
+    tflint in the module directory                    exit 2
+
+tflint reports only child-module issues tied to passed variables, and its syntax rules do not
+descend into child modules. So a module is linted only by running tflint where the module lives.
+The `lint` job does that for every directory, needs no AWS credentials, and therefore also covers
+directories the plan pipeline deliberately cannot — `environments/org-delegation` included.
+
+Checks 2 and 3 are consequently about **plan** coverage, and the exclusions manifest lists
+directories with no plan coverage. Nothing opts out of linting.
 
 Coverage is deliberately not inferred from a path filter alone. A filter matching a module that no
 planned environment consumes triggers a run that never loads that module, so it is not coverage. A
@@ -277,9 +295,9 @@ to it unless the path is passed explicitly. Measured with the pinned 0.64.0 from
 
 ### Excluding a directory
 
-A directory that genuinely should not be in CI goes in
+A directory that genuinely should not be **planned** goes in
 [`.github/terraform-ci-coverage-exclusions.json`](../terraform-ci-coverage-exclusions.json) with a
-reason. The check asserts both directions: an excluded directory must still exist, and must **not**
+reason. It is still linted — there is no way to exclude a directory from the `lint` job, by design. The check asserts both directions: an excluded directory must still exist, and must **not**
 also be covered — so an exclusion cannot outlive the reason recorded for it.
 
 `.github/scripts/test_check_terraform_ci_coverage.py` is the checker's mutation self-test. It

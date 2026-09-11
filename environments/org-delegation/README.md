@@ -55,9 +55,11 @@ which `ci-coverage.yaml` enforces: every other Terraform directory must be cover
 and this one must stay uncovered for as long as the entry stands. Wiring it into CI without
 removing the entry fails the check rather than leaving a stale reason behind.
 
-**The consequence, since it is easy to miss:** no workflow means no `tflint`, no
-`terraform fmt -check` and no `terraform validate` for this directory. Run them by hand before
-changing it, with the repository-root config so the AWS ruleset actually loads:
+**What that does and does not cost you.** `tflint` DOES run here: the `lint` job in
+`ci-coverage.yaml` runs it in every Terraform directory, needs no AWS credentials, and is
+unfiltered, so this directory is linted on every pull request like any other. What the missing
+workflow costs is `terraform fmt -check`, `terraform validate` and `terraform plan`, which are
+part of the plan pipeline. Run those by hand before changing this directory:
 
 ```console
 REPO_ROOT=$(git rev-parse --show-toplevel)

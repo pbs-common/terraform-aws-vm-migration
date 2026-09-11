@@ -42,6 +42,23 @@ SIX CHECKS, and each direction matters:
                  as "everything that exists is listed" rots into entries matching nothing.
   6. VACUITY     the inventory roots exist and are non-empty, and at least one workflow
                  actually runs tflint.
+  7. DIRECT LINT an unfiltered workflow runs tflint IN EACH Terraform directory, driven
+                 by this script's own --list-dirs output.
+
+                 Check 7 exists because the original model was WRONG, and measurably so.
+                 It assumed that planning an environment lints the modules it consumes.
+                 It does not. Measured 2026-09-11 with duplicate map keys reintroduced
+                 into modules/mgn-replication-baseline:
+
+                     tflint from environments/ad (which consumes it)   exit 0
+                     tflint in the module directory                    exit 2
+
+                 tflint's module-calling support reports only child-module issues tied to
+                 passed variables; syntax rules do not descend. So a module is linted only
+                 by running tflint in the module's own directory, and the duplicate-key and
+                 unused-declaration defects this repository just fixed could have returned
+                 with CI green. Coverage-by-consumption is not lint coverage, and checks 2
+                 and 3 are now about PLAN coverage only.
 
 Anything this script cannot parse or cannot model is a FAILURE, never a skip. A checker
 has three outcomes -- verified pass, verified fail, and could-not-verify -- and the third
@@ -69,17 +86,22 @@ WORKFLOW_DIR = Path(".github/workflows")
 EXCLUSIONS_FILE = Path(".github/terraform-ci-coverage-exclusions.json")
 TFLINT_CONFIG = ".tflint.hcl"
 
-# The only accepted spellings of "the repository-root tflint config", as a workflow would
-# write them. A SUFFIX test is not enough and was a real hole: `/tmp/.tflint.hcl` ends in
-# the right basename and loads a completely different config, with no AWS plugin, while
-# the check reported success. Matching the exact supported expressions means a new but
-# legitimate spelling fails loudly and gets added here, rather than an illegitimate one
-# passing quietly.
-ROOT_CONFIG_VALUES = (
-    "${{ github.workspace }}/" + TFLINT_CONFIG,
-    "$GITHUB_WORKSPACE/" + TFLINT_CONFIG,
-    TFLINT_CONFIG,
-)
+# The ONE accepted spelling of "the repository-root tflint config".
+#
+# A suffix test was the first attempt and was a real hole: `/tmp/.tflint.hcl` ends in the
+# right basename and loads a completely different config, with no AWS plugin, while the
+# check reported success. The second attempt then allowed two more spellings that DO NOT
+# WORK, which is the same defect in a new place:
+#
+#   ".tflint.hcl"                  relative, so it resolves against the step's
+#                                  working-directory (environments/ad), not the root
+#   "$GITHUB_WORKSPACE/.tflint.hcl"  a workflow `env:` value is not shell-expanded, so
+#                                  tflint receives that dollar sign literally
+#
+# Only the GitHub expression form is substituted before the process sees it, so only it
+# is accepted. A legitimate new spelling must be added here deliberately, with evidence
+# that it resolves to the root.
+ROOT_CONFIG_VALUES = ("${{ github.workspace }}/" + TFLINT_CONFIG,)
 
 # Triggers that can carry path filters and can therefore decide whether a plan runs.
 # Enumerated rather than assumed: the first version of this script read only
@@ -489,13 +511,19 @@ def tflint_run_steps(workflows: list[dict]):
                     continue
                 step_env = step.get("env") if isinstance(step.get("env"), dict) else {}
                 label = step.get("name") or f"steps[{index}]"
-                yield wf, job_name, label, (step_env, job_env, wf_env), unclear
+                # A conditional tflint job or step can skip linting entirely while every
+                # caller still counts as covered -- `if: false` on the step would do it.
+                # The condition is reported rather than evaluated, because the context it
+                # would be evaluated in belongs to whichever caller invoked the reusable
+                # workflow, and guessing that is how a checker acquires a silent hole.
+                conditions = [c for c in (job.get("if"), step.get("if")) if c is not None]
+                yield wf, job_name, label, (step_env, job_env, wf_env), unclear, conditions
 
 
 def lint_capable(workflows: list[dict]) -> set[str]:
     """Local reusable-workflow paths that run tflint, as a caller would `uses:` them."""
-    return {"./" + wf["rel"] for wf, _, _, _, unclear in tflint_run_steps(workflows)
-            if not unclear}
+    return {"./" + wf["rel"] for wf, _, _, _, unclear, conds in tflint_run_steps(workflows)
+            if not unclear and not conds}
 
 
 def resolve_env(envs: tuple[dict, ...], name: str):
@@ -514,8 +542,16 @@ def resolve_env(envs: tuple[dict, ...], name: str):
 def tflint_config_problems(workflows: list[dict]) -> list[str]:
     """Every step that runs tflint must resolve TFLINT_CONFIG_FILE to the root config."""
     problems = []
-    for wf, job_name, label, envs, unclear in tflint_run_steps(workflows):
+    for wf, job_name, label, envs, unclear, conditions in tflint_run_steps(workflows):
         where = f"{wf['rel']}: job {job_name!r} step {label!r}"
+        if conditions:
+            problems.append(
+                f"{where} runs tflint under a condition ({conditions!r}). A conditional "
+                f"lint can be skipped while every caller still counts as covered -- "
+                f"`if: false` alone would disable linting repository-wide. Make the lint "
+                f"unconditional, or model the condition deliberately"
+            )
+            continue
         if unclear:
             problems.append(
                 f"{where} mentions tflint in a form this script cannot classify as an "
@@ -653,6 +689,9 @@ def run(repo: Path) -> list[str]:
 
     # ---- check 1: tflint is actually configured wherever it runs --------------------
     failures.extend(tflint_config_problems(workflows))
+
+    # ---- check 7: every directory is linted DIRECTLY, not via a consumer ------------
+    failures.extend(lint_job_problems(repo, workflows))
 
     # ---- gather callers, refusing anything unmodelled -------------------------------
     # Staleness is collected for EVERY workflow, not only the ones that turn out to be
@@ -799,7 +838,61 @@ def run(repo: Path) -> list[str]:
     return failures
 
 
+LIST_DIRS_FLAG = "--list-dirs"
+
+
+def lint_job_problems(repo: Path, workflows: list[dict]) -> list[str]:
+    """Check 7: some unfiltered workflow lints every directory, using OUR enumeration.
+
+    The directory set is not restated in YAML. The workflow asks this script for it, so
+    the lint loop and the coverage check cannot disagree about which directories exist --
+    one value, one derivation. That is what makes the lint coverage structural rather than
+    a list somebody has to remember to update.
+    """
+    for wf in workflows:
+        try:
+            has_pr, pr_paths = trigger_filters(wf["doc"], "pull_request")
+        except Unsupported:
+            continue
+        if not has_pr or pr_paths:
+            continue  # must be unfiltered, or a new directory could dodge the lint
+        jobs = wf["doc"].get("jobs")
+        if not isinstance(jobs, dict):
+            continue
+        for job in jobs.values():
+            if not isinstance(job, dict) or not isinstance(job.get("steps"), list):
+                continue
+            for step in job["steps"]:
+                if not isinstance(step, dict) or not isinstance(step.get("run"), str):
+                    continue
+                run = step["run"]
+                if LIST_DIRS_FLAG in run and classify_run_block(run)[0]:
+                    return []
+    return [
+        f"no unfiltered workflow runs tflint in each directory listed by "
+        f"`{Path(__file__).name} {LIST_DIRS_FLAG}`. Planning an environment does NOT lint "
+        f"the modules it consumes -- measured: reintroducing duplicate map keys into "
+        f"modules/mgn-replication-baseline leaves tflint from environments/ad at exit 0 "
+        f"while tflint in the module exits 2. Without that loop, module regressions ship "
+        f"with CI green"
+    ]
+
+
 def main(argv: list[str]) -> int:
+    if LIST_DIRS_FLAG in argv:
+        rest = [a for a in argv[1:] if a != LIST_DIRS_FLAG]
+        repo = Path(rest[0]).resolve() if rest else Path(__file__).resolve().parents[2]
+        dirs, problems = discover_terraform_dirs(repo)
+        if problems:
+            for problem in problems:
+                print(f"FAIL  {problem}", file=sys.stderr)
+            return 1
+        if not dirs:
+            print("FAIL  no Terraform directories found", file=sys.stderr)
+            return 1
+        print("\n".join(dirs))
+        return 0
+
     repo = Path(argv[1]).resolve() if len(argv) > 1 else Path(__file__).resolve().parents[2]
     failures = run(repo)
     if failures:
