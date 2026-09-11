@@ -1,9 +1,11 @@
 # Organization-level delegation for AWS Application Migration Service (MGN).
 #
 # SCOPE: these are AWS Organizations management-account resources. Only a principal
-# in the management account can create them -- a member-account apply fails with
-# AccessDeniedException, not a plan error. See the environment's README for which
-# account/role this is expected to run as.
+# in the management account can create them. A member-account caller is rejected by
+# the precondition below AT PLAN TIME, naming both the required account and the
+# actual one -- it never reaches the apply, and never sees the AccessDeniedException
+# the API would otherwise return. See the environment's README for which account and
+# role this is expected to run as.
 #
 # Trusted access (EnableAWSServiceAccess) is deliberately NOT managed here. The only
 # resource that expresses it is `aws_organizations_organization`, which manages the
@@ -31,7 +33,7 @@ resource "aws_organizations_delegated_administrator" "this" {
     precondition {
       condition = data.aws_caller_identity.current.account_id == data.aws_organizations_organization.this.master_account_id
       error_message = format(
-        "Delegated administrators can only be registered from the organization management account (%s); this apply is running as %s.",
+        "Delegated administrators can only be registered from the organization management account (%s); this run is authenticated as %s.",
         data.aws_organizations_organization.this.master_account_id,
         data.aws_caller_identity.current.account_id,
       )
