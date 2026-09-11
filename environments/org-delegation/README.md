@@ -92,6 +92,24 @@ terraform plan -var-file org-delegation.tfvars
 
 **A plan today should report no changes.** Both registrations are in state and live.
 
+The import set is derived from live state rather than hard-coded, by reading
+`aws_organizations_delegated_services` for the target account and intersecting it with
+`service_principals`. That keeps two paths working at once -- rebuilding from lost state
+imports whatever exists, and adding a new principal creates just that one:
+
+| Scenario | Plan |
+|---|---|
+| Lost or empty state, both principals live | `2 to import, 0 to add` |
+| A third principal added to `service_principals` | `2 to import, 1 to add` |
+
+**Known constraint.** `ListDelegatedServicesForAccount` raises
+`AccountNotRegisteredException` for an account that is a delegated administrator for
+nothing at all, so this directory cannot bootstrap a brand-new delegated administrator
+from zero -- the plan fails reading that data source before it can create anything. This
+environment describes an account that already holds a delegation, so the edge does not
+arise here. To point it at a fresh account, register one principal by hand first, or
+remove the data source for that single run.
+
 For the record, the first plan -- run before the apply -- reported **1 to import, 1 to
 add, 0 to change, 0 to destroy**: MGN adopted, StackSets created. If a future plan wants
 to add or destroy either registration, the live delegation has drifted from this code;
