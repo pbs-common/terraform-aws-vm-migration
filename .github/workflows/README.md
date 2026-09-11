@@ -4,6 +4,12 @@ This repo runs Terraform through GitHub Actions. Pipelines are split into two la
 
 - **Entrypoint workflows** — one per environment. They own the triggers (push, PR, manual) and
   wire together the reusable jobs. Today only `ad.yaml` exists.
+- **Repository-wide checks** — `ci-coverage.yaml`, deliberately unfiltered. Every *entrypoint*
+  workflow has a `paths:` list (the reusable workflows have no triggers of their own at all), so
+  a new `environments/*` or `modules/*` directory matches nobody's filters and passes CI by never
+  being looked at. This one runs on every pull request and fails if any Terraform directory is
+  neither covered by a workflow nor recorded as a deliberate exclusion. See
+  [Coverage](#coverage-every-terraform-directory-is-linted).
 - **Reusable workflows** — `terraform-validate`, `terraform-plan`, `terraform-apply`,
   `terraform-destroy`. They are `workflow_call`-only building blocks and are never run directly
   from the Actions tab (with one caveat noted under [Destroy](#destroy)).
@@ -19,6 +25,7 @@ account.
 | File | Type | Trigger | Touches AWS |
 |---|---|---|---|
 | `ad.yaml` | Entrypoint | `push` to `main`, `pull_request` (path-filtered), `workflow_dispatch` | Yes, via reusable jobs |
+| `ci-coverage.yaml` | Repository-wide check | `push` to `main`, `pull_request` (**no** path filter), `workflow_dispatch` | No |
 | `terraform-validate.yaml` | Reusable | `workflow_call` | No |
 | `terraform-plan.yaml` | Reusable | `workflow_call` | Yes |
 | `terraform-apply.yaml` | Reusable | `workflow_call` | Yes |
@@ -66,11 +73,12 @@ flowchart TD
     T{Trigger}
     T -->|"pull_request<br/>(path-filtered)"| V1[validate-ad<br/>terraform fmt -check]
     T -->|push to main| V2[validate-ad]
-    T -->|workflow_dispatch| V2
+    T -->|workflow_dispatch| V3[validate-ad]
 
-    V1 --> STOP[Plan and apply skipped<br/>ref is not refs/heads/main]
+    V2 --> STOP["plan-ad SKIPPED<br/>its if: admits only<br/>pull_request / workflow_dispatch<br/>apply-ad needs plan-ad, so it is skipped too"]
 
-    V2 --> P[plan-ad<br/>environment: ad]
+    V1 --> P[plan-ad<br/>environment: ad]
+    V3 --> P
     P --> P1[Assume OIDC role in AD account]
     P1 --> P2[tflint]
     P2 --> P3["terraform init<br/>(S3 backend, partial config)"]
@@ -79,7 +87,8 @@ flowchart TD
     P5 --> P6["terraform plan --var-file ad.tfvars<br/>-out=tfplan"]
     P6 --> P7["Upload artifact terraform-plan-ad<br/>(7 day retention)"]
 
-    P7 --> G{"Environment 'ad'<br/>protection rules"}
+    P7 --> PR["Post plan to the PR<br/>(pull_request only)"]
+    PR --> G{"Environment 'ad'<br/>protection rules"}
     G -->|Approval required| W[Job waits for reviewer]
     G -->|No rules| A
     W --> A[apply-ad<br/>environment: ad]
@@ -104,12 +113,22 @@ Key behaviours:
 
 | Event | What runs | Notes |
 |---|---|---|
-| PR touching `environments/ad/**` or `modules/ec2-windows-workload/**` | `validate-ad` only | Format check. Plan and apply are skipped because the ref is not `refs/heads/main`. |
-| PR touching anything else | Nothing | The `pull_request` trigger is path-filtered. |
-| Push to `main` (merge included) | `validate-ad` → `plan-ad` → `apply-ad` | **No path filter on `push`.** Any commit landing on `main` runs the full AD pipeline, even a README-only change. |
+| PR touching any path in `ad.yaml`'s `paths:` list | `coverage` + `validate-ad` → `plan-ad` | `plan-ad` **does** run on pull requests (`ad.yaml`'s `if:` admits `pull_request`), so the plan and its tflint step execute and the plan is posted to the PR. Only `apply-ad` is skipped, because its `if:` requires `refs/heads/main`. The filter list is **not** restated here — read it from `ad.yaml`, which is the only place it is maintained. |
+| PR touching anything else | `coverage` only | `ad.yaml`'s `pull_request` trigger is path-filtered; `ci-coverage.yaml`'s is not, so it runs on every pull request. |
+| Push to `main` (merge included) | `coverage` + `validate-ad` only | **No path filter on `push`**, so any commit landing on `main` runs the format check — but `plan-ad` and `apply-ad` are both **skipped**, measured on runs `34616951644` and `34502047308`. See the known gap below. |
+| `workflow_dispatch` from `main` | `validate-ad` → `plan-ad` → `apply-ad` | The only path that currently reaches `apply-ad`. |
 
-Because plan does not run on pull requests, the "Post Plan to PR" step in `terraform-plan.yaml`
-never fires today. The plan you review is the one in the post-merge run on `main`.
+`plan-ad` runs on pull requests, so the "Post Plan to PR" step in `terraform-plan.yaml` does fire
+and the plan you review is the one on the pull request itself.
+
+**Known gap, pre-existing and not addressed here.** `plan-ad`'s `if:` admits only `pull_request`
+and `workflow_dispatch`, so it is skipped on `push` — and `apply-ad` declares `needs: plan-ad`, so
+a skipped plan skips the apply with it. Measured on two consecutive pushes to `main`
+(runs `34616951644` and `34502047308`): `Plan AD Environment` skipped, `Apply AD Environment`
+skipped. **Merging to `main` therefore applies nothing**; the only path that reaches `apply-ad`
+today is `workflow_dispatch` from `main`. Whether the intent is "apply on merge" or "apply only
+on demand" is a deployment decision, so it is deliberately left alone by this pull request rather
+than changed in a linting change.
 
 ---
 
@@ -205,6 +224,90 @@ Same input surface as apply, but runs `terraform destroy --var-file <environment
 
 ---
 
+## Coverage: every Terraform directory is linted
+
+CI lints Terraform with tflint inside `terraform-plan.yaml`. That is a *reusable* workflow, so it
+only ever runs for a directory some entrypoint points it at, and only when that entrypoint's
+`paths:` filters fire. Two things follow, and both were live defects on 2026-09-11:
+
+- **A directory no filter matches is not linted at all.** `environments/org-delegation` and
+  `modules/mgn-organizations-delegation` merged unlinted while the repository looked covered.
+- **A module an environment consumes but no filter names is not linted either.** Editing it
+  changes that environment's plan and triggers nothing. `modules/ssm-session-access-policy` was in
+  that state despite being consumed by `environments/ad/main.tf`.
+
+`ci-coverage.yaml` runs `.github/scripts/check_terraform_ci_coverage.py` on every pull request,
+with no path filter of its own. It enforces six things:
+
+1. **Config** — every step that runs tflint resolves `TFLINT_CONFIG_FILE` to the root
+   `.tflint.hcl`. Presence of the name is not enough: scope precedence is resolved, and an empty
+   value or one pointing elsewhere fails, because both leave tflint reading its working directory
+   exactly as if the variable were unset.
+2. **Coverage** — every Terraform directory is covered or excluded, never neither and never both.
+3. **Dependency** — a workflow that plans an environment filters on every module that environment
+   consumes, derived from the environment's own `source` lines.
+4. **Shared inputs** — a workflow that plans anything also filters on `.tflint.hcl` and on every
+   reusable workflow it calls. Without this a pull request changing the linting runs no lint.
+5. **Staleness** — every filter (on `push` as well as `pull_request`), every `working_directory`
+   and every exclusion still names something that exists.
+6. **Vacuity** — the inventory roots exist and are non-empty, and something actually runs tflint.
+7. **Direct lint** — an unfiltered workflow runs tflint *in each Terraform directory*, driven by
+   `check_terraform_ci_coverage.py --list-dirs` so the lint loop and the coverage check share one
+   enumeration.
+
+**Planning an environment does not lint the modules it consumes**, which is why check 7 exists and
+why the `lint` job is separate from the plan pipeline rather than a duplicate of it. Measured with
+duplicate map keys reintroduced into `modules/mgn-replication-baseline`:
+
+    tflint from environments/ad (which consumes it)   exit 0
+    tflint in the module directory                    exit 2
+
+tflint reports only child-module issues tied to passed variables, and its syntax rules do not
+descend into child modules. So a module is linted only by running tflint where the module lives.
+The `lint` job does that for every directory, needs no AWS credentials, and therefore also covers
+directories the plan pipeline deliberately cannot — `environments/org-delegation` included.
+
+Checks 2 and 3 are consequently about **plan** coverage, and the exclusions manifest lists
+directories with no plan coverage. Nothing opts out of linting.
+
+Coverage is deliberately not inferred from a path filter alone. A filter matching a module that no
+planned environment consumes triggers a run that never loads that module, so it is not coverage. A
+plan job whose `if:` is false for pull requests is not coverage either — the condition is evaluated,
+not ignored.
+
+Anything the script cannot model — `paths-ignore`, an unsupported glob, an `if:` outside its small
+expression subset, a tflint invoked in a form its grammar does not recognise, Terraform nested below
+an inventory root, an unparseable workflow — **fails**. A checker has three outcomes, and the third
+one quietly joining "pass" is the defect class this whole thing exists to prevent.
+
+### Why tflint needs `TFLINT_CONFIG_FILE`
+
+Without a config declaring the AWS plugin, `tflint --init` installs nothing and only the bundled
+terraform ruleset runs — every AWS-specific check is silently absent while the step still reports
+success. The config lives at the repository root, and tflint reads `.tflint.hcl` from its **own
+working directory only**; it never walks up. `terraform-plan.yaml` sets
+`defaults.run.working-directory` to the environment being planned, so the root config is invisible
+to it unless the path is passed explicitly. Measured with the pinned 0.64.0 from `environments/ad`:
+
+    bare                        + ruleset.terraform (0.15.0-bundled)
+    TFLINT_CONFIG_FILE=<root>   + ruleset.aws (0.44.0)
+                                + ruleset.terraform (0.15.0-bundled)
+
+### Excluding a directory
+
+A directory that genuinely should not be **planned** goes in
+[`.github/terraform-ci-coverage-exclusions.json`](../terraform-ci-coverage-exclusions.json) with a
+reason. It is still linted — there is no way to exclude a directory from the `lint` job, by design. The check asserts both directions: an excluded directory must still exist, and must **not**
+also be covered — so an exclusion cannot outlive the reason recorded for it.
+
+`.github/scripts/test_check_terraform_ci_coverage.py` is the checker's mutation self-test. It
+reintroduces each defect shape into a copy of this repository and requires the checker to reject
+it, with a control run proving it still accepts the tree as committed. `ci-coverage.yaml` runs the
+self-test **before** the check, because a checker that has silently stopped detecting anything
+looks exactly like a clean repository.
+
+---
+
 ## Adding a pipeline for a new environment
 
 1. Create `environments/<name>/` with `main.tf`, `variables.tf`, `versions.tf` (S3 backend block
@@ -213,7 +316,10 @@ Same input surface as apply, but runs `terraform destroy --var-file <environment
    that account's role. Add required reviewers for anything production-facing.
 3. Confirm the role works by running **Test OIDC Credentials** and checking the account ID.
 4. Copy `ad.yaml` to `<name>.yaml`, updating: the `pull_request` path filters, `working_directory`,
-   `environment`, `s3_backend_bucket`, `s3_backend_key`, and `aws_region`.
+   `environment`, `s3_backend_bucket`, `s3_backend_key`, and `aws_region`. The path filters must
+   name the new environment **and every module it consumes**, or CI will not run when one of those
+   modules changes. `ci-coverage.yaml` fails the pull request if either is missing, so this is
+   enforced rather than remembered.
 5. Update [environments/README.md](../../environments/README.md) with the new row.
 
 ---

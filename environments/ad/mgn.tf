@@ -24,7 +24,6 @@ module "mgn_replication_baseline" {
   staging_subnet_cidr         = var.mgn_staging_subnet_cidr
   staging_az                  = var.mgn_staging_az
   source_vpc_cidr_blocks      = var.mgn_source_vpc_cidr_blocks
-  target_vpc_cidr_blocks      = var.mgn_target_vpc_cidr_blocks
   cross_account_mgn_role_arns = var.mgn_cross_account_role_arns
   create_internet_gateway     = var.mgn_create_internet_gateway
   internet_gateway_id         = var.mgn_create_internet_gateway ? null : (var.mgn_internet_gateway_id != null ? var.mgn_internet_gateway_id : data.aws_internet_gateway.default.id)

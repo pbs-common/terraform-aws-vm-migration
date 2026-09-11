@@ -1,0 +1,101 @@
+name: CI Coverage
+
+# DELIBERATELY UNFILTERED. Every other workflow here has a `paths:` list, which is
+# exactly the blind spot this job exists to close: a new environments/* or modules/*
+# directory matches nobody's filters, so it triggers no workflow and passes CI by never
+# being looked at. A path filter on this job would reintroduce that hole in the one
+# place that checks for it.
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    name: Terraform CI coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install "pyyaml==6.0.3"
+
+      # Order matters: the self-test proves the checker still FAILS on each defect shape
+      # it was written for. A checker that has silently stopped detecting anything passes
+      # the run above and looks identical to a clean repository.
+      - name: Prove the checker still catches what it claims (mutation self-test)
+        run: python .github/scripts/test_check_terraform_ci_coverage.py
+
+      - name: Check every Terraform directory is linted by CI
+        run: python .github/scripts/check_terraform_ci_coverage.py
+
+  # Lints EVERY Terraform directory, in the directory itself. This is separate from the
+  # plan pipeline on purpose, and it is not a duplicate of it: planning an environment
+  # does NOT lint the modules it consumes. Measured with duplicate map keys reintroduced
+  # into modules/mgn-replication-baseline --
+  #     tflint from environments/ad (which consumes it)   exit 0
+  #     tflint in the module directory                    exit 2
+  # tflint reports only child-module issues tied to passed variables and its syntax rules
+  # do not descend, so a module is linted only by running tflint where the module lives.
+  #
+  # It needs no AWS credentials, which is why it can cover directories the plan pipeline
+  # deliberately cannot -- environments/org-delegation included.
+  #
+  # The directory list is NOT written out here. It comes from the same enumeration the
+  # coverage check uses, so the two cannot disagree about which directories exist.
+  lint:
+    name: tflint every Terraform directory
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install "pyyaml==6.0.3"
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: "0.64.0"
+
+      - name: Run TFLint in every Terraform directory
+        env:
+          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl
+          # Plugin downloads hit the GitHub releases API. Unauthenticated, that is a
+          # shared-IP rate limit the runner regularly exhausts.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -u
+          # Once, not per directory: plugins install to a shared ~/.tflint.d/plugins, and
+          # re-running it per directory made six identical GitHub API calls for the same
+          # plugin. Together with the plan job's that exceeded the anonymous rate limit and
+          # failed CI -- hence GITHUB_TOKEN above, which authenticates the fetch.
+          tflint --init
+          FAILED=0
+          for d in $(python .github/scripts/check_terraform_ci_coverage.py --list-dirs); do
+            echo "::group::$d"
+            ( cd "$d" && tflint --format compact ) || FAILED=1
+            echo "::endgroup::"
+          done
+          if [ "$FAILED" -ne 0 ]; then
+            echo "tflint reported problems in at least one directory"
+            exit 1
+          fi

@@ -9,9 +9,21 @@ on:
 
   pull_request:
     paths:
+      # Every module environments/ad consumes must appear here, or editing that module
+      # changes this plan and triggers nothing. ssm-session-access-policy was missing
+      # until 2026-09-11 despite being consumed since environments/ad/main.tf:191.
+      # .github/scripts/check_terraform_ci_coverage.py check 3 now derives this list
+      # from the environment's own `source = "../../modules/..."` lines and fails if
+      # one is absent.
       - "environments/ad/**"
       - "modules/ec2-windows-workload/**"
       - "modules/mgn-replication-baseline/**"
+      - "modules/ssm-session-access-policy/**"
+      # Shared inputs that change what this pipeline DOES. Without them a PR editing the
+      # lint config or the reusable workflow runs no plan and no tflint, so the change to
+      # the checking itself is never exercised by the thing it checks.
+      - ".tflint.hcl"
+      - ".github/workflows/**"
 
 permissions:
   contents: read

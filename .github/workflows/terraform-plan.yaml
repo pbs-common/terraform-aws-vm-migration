@@ -87,7 +87,24 @@ jobs:
         with:
           tflint_version: ${{ inputs.tflint_version }}
 
+      # TFLINT_CONFIG_FILE is required here, not a nicety. `defaults.run.working-directory`
+      # above puts both commands in ${{ inputs.working_directory }}, and tflint reads
+      # .tflint.hcl from its own working directory only -- it never walks up to the
+      # repository root. Without the explicit path the root config is invisible,
+      # `tflint --init` installs no plugins, and the AWS ruleset silently does not run
+      # while this step still reports success. Measured with the pinned 0.64.0 from
+      # environments/ad on 2026-09-11:
+      #   bare                       -> + ruleset.terraform (0.15.0-bundled)
+      #   TFLINT_CONFIG_FILE=<root>  -> + ruleset.aws (0.44.0)
+      #                                 + ruleset.terraform (0.15.0-bundled)
+      # Enforced by .github/scripts/check_terraform_ci_coverage.py, check 1.
       - name: Run TFLint
+        env:
+          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl
+          # `tflint --init` fetches the AWS ruleset from the GitHub releases API.
+          # Unauthenticated it shares a per-IP limit with every other runner and does fail:
+          # measured 2026-09-11, "403 API rate limit exceeded ... rate reset in 7m53s".
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tflint --init
           tflint --format compact

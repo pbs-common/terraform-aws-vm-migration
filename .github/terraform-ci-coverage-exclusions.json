@@ -1,0 +1,22 @@
+{
+  "_comment": [
+    "Terraform directories deliberately NOT PLANNED by any workflow.",
+    "This is about the PLAN pipeline only. Every directory here is still LINTED: the",
+    "`lint` job in ci-coverage.yaml runs tflint in each one, needs no AWS credentials, and",
+    "cannot be opted out of. An entry below therefore means 'no terraform plan/apply runs",
+    "for this directory', not 'no CI touches it'.",
+    "Read and enforced by .github/scripts/check_terraform_ci_coverage.py: an entry must name",
+    "a directory that exists AND is not plan-covered, so an exclusion cannot outlive its",
+    "reason. Anything not listed here must be plan-covered."
+  ],
+  "excluded": [
+    {
+      "path": "environments/org-delegation",
+      "reason": "Runs terraform against the organization MANAGEMENT account, and the OIDC_ROLE_ARN secret CI holds targets the workload account. Pointing CI at a role with management-account Organizations write access is a separate decision, taken explicitly rather than inherited. See environments/org-delegation/README.md, 'Where it runs'. This excludes PLAN and APPLY only -- tflint still runs here via the credential-free lint job in ci-coverage.yaml, so run terraform fmt -check and validate by hand before changing it, but linting is covered."
+    },
+    {
+      "path": "modules/mgn-organizations-delegation",
+      "reason": "Consumed only by environments/org-delegation, which is plan-excluded above for its credential boundary, so no workflow can plan this module either. It IS linted directly by the lint job in ci-coverage.yaml. If this module ever gains a consumer that is plan-covered, delete this entry -- the coverage check will then require it."
+    }
+  ]
+}

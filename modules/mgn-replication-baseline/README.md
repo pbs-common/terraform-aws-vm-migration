@@ -93,7 +93,6 @@ module "mgn_replication_baseline" {
   staging_subnet_cidr         = "10.0.100.0/24"
   staging_az                  = "us-east-1a"
   source_vpc_cidr_blocks      = ["10.0.0.0/8"]      # On-prem network CIDR
-  target_vpc_cidr_blocks      = ["10.1.0.0/16"]     # Target VPC CIDR
   enable_ebs_encryption       = true
 }
 ```
@@ -110,7 +109,6 @@ module "mgn_replication_baseline" {
   staging_subnet_cidr         = "10.0.100.0/24"
   staging_az                  = "us-east-1a"
   source_vpc_cidr_blocks      = ["10.0.0.0/8"]
-  target_vpc_cidr_blocks      = ["10.1.0.0/16"]
   
   # Cross-account connector setup
   cross_account_mgn_role_arns = [
@@ -135,7 +133,6 @@ module "mgn_replication_baseline" {
   staging_subnet_cidr             = "10.0.100.0/24"
   staging_az                      = "us-east-1a"
   source_vpc_cidr_blocks          = ["10.0.0.0/8"]
-  target_vpc_cidr_blocks          = ["10.1.0.0/16"]
   
   # Direct Connect path for replication
   enable_direct_connect_path      = true
@@ -156,7 +153,6 @@ module "mgn_replication_baseline" {
 | `staging_subnet_cidr` | CIDR block for MGN staging area subnet | `string` | `10.0.100.0/24` | no |
 | `staging_az` | Availability zone for staging subnet | `string` | n/a | yes |
 | `source_vpc_cidr_blocks` | CIDR blocks of source VPCs/on-prem networks | `list(string)` | n/a | yes |
-| `target_vpc_cidr_blocks` | CIDR blocks of target VPCs for workload placement | `list(string)` | n/a | yes |
 | `cross_account_mgn_role_arns` | Cross-account MGN role ARNs | `list(string)` | `[]` | no |
 | `enable_direct_connect_path` | Enable Direct Connect route for replication | `bool` | `false` | no |
 | `enable_ebs_encryption` | Enable EBS encryption at rest | `bool` | `true` | no |
@@ -266,7 +262,6 @@ Create a role with the following assume policy:
 - [ ] AWS account with MGN enabled
 - [ ] VPC with private subnets (shared with AD)
 - [ ] On-premises network CIDR documented
-- [ ] Target VPC CIDR ranges known
 - [ ] (Optional) Direct Connect VIF ID and BGP ASN
 - [ ] (Optional) Customer-managed KMS key ARN for EBS encryption
 

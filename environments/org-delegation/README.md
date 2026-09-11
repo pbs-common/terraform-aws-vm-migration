@@ -49,6 +49,36 @@ This directory is deliberately **not** wired into a GitHub Actions workflow. The
 management-account Organizations write access is a separate decision that should be made
 explicitly rather than inherited from this change.
 
+That omission is recorded in
+[`.github/terraform-ci-coverage-exclusions.json`](../../.github/terraform-ci-coverage-exclusions.json),
+which `ci-coverage.yaml` enforces: every other Terraform directory must be covered by a workflow,
+and this one must stay uncovered for as long as the entry stands. Wiring it into CI without
+removing the entry fails the check rather than leaving a stale reason behind.
+
+**What that does and does not cost you.** `tflint` DOES run here: the `lint` job in
+`ci-coverage.yaml` runs it in every Terraform directory, needs no AWS credentials, and is
+unfiltered, so this directory is linted on every pull request like any other. What the missing
+workflow costs is `terraform fmt -check`, `terraform validate` and `terraform plan`, which are
+part of the plan pipeline. Run those by hand before changing this directory:
+
+```console
+REPO_ROOT=$(git rev-parse --show-toplevel)
+
+terraform fmt -recursive -check .
+
+export TFLINT_CONFIG_FILE="$REPO_ROOT/.tflint.hcl"
+tflint --init
+tflint --format compact
+
+# validate needs providers, so it needs an init first. -backend=false avoids
+# touching the state bucket when all you want is to check the configuration.
+terraform init -backend=false -input=false
+terraform validate
+```
+
+All four must pass. `terraform plan` additionally needs management-account credentials --
+see [Applying](#applying) below.
+
 ## State
 
 Applied 2026-09-11. State lives in the management account's existing Terraform state
