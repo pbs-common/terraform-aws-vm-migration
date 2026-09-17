@@ -18,6 +18,7 @@ on:
       - "environments/ad/**"
       - "modules/ec2-windows-workload/**"
       - "modules/ssm-session-access-policy/**"
+      - "modules/backup/**"
       # Shared inputs that change what this pipeline DOES. Without them a PR editing the
       # lint config or the reusable workflow runs no plan and no tflint, so the change to
       # the checking itself is never exercised by the thing it checks.

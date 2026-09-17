@@ -39,7 +39,6 @@ Resources are selected automatically by checking for the `backup-enable=true` ta
 | kms_key_id | KMS key ID/ARN for customer-managed encryption (AWS-managed encryption used if null) | `string` | `null` | no |
 | backup_schedule | Backup schedule in cron format | `string` | `"cron(0 1 * * ? *)"` | no |
 | backup_retention_days | Days to retain backups | `number` | `30` | no |
-| backup_tag_key | Tag key to identify resources | `string` | `"backup-enable"` | no |
 | tags | Tags to apply to resources | `map(string)` | `{}` | no |
 
 ## Outputs
