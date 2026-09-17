@@ -3,8 +3,8 @@ variable "vault_name" {
   type        = string
 
   validation {
-    condition     = length(trimspace(var.vault_name)) > 0 && length("${var.vault_name}-backup-service-role") <= 64
-    error_message = "vault_name must not be empty and must be short enough so that derived IAM role name '${var.vault_name}-backup-service-role' does not exceed 64 characters."
+    condition     = length(trimspace(var.vault_name)) > 0 && length("${var.vault_name}-backup-service-role") <= 64 && length("${var.vault_name}-backup-plan") <= 50 && length("${var.vault_name}-backup-rule") <= 50 && length("${var.vault_name}-tag-true") <= 50
+    error_message = "vault_name must not be empty and must keep all derived IAM and AWS Backup names within their length limits."
   }
 }
 
