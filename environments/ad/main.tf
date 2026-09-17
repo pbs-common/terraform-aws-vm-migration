@@ -216,3 +216,13 @@ module "dc2" {
 
   tags = var.tags
 }
+
+module "backup" {
+  source = "../../modules/backup"
+
+  vault_name            = "ad-backup-vault"
+  kms_key_id            = var.kms_key_id
+  backup_schedule       = "cron(0 1 * * ? *)"
+  backup_retention_days = 30
+  tags                  = var.tags
+}

@@ -29,7 +29,7 @@ variable "golden_ami_id" {
 }
 
 variable "tags" {
-  description = "Tags applied to DC1/DC2, merged with an automatic Name tag."
+  description = "Tags applied to resources, merged with an automatic Name tag."
   type        = map(string)
   default     = {}
 }
@@ -66,6 +66,12 @@ variable "overflow2_cidr_blocks" {
 
 variable "key_name" {
   description = "Optional EC2 key pair name, kept as an RDP fallback alongside SSM Session Manager access."
+  type        = string
+  default     = null
+}
+
+variable "kms_key_id" {
+  description = "KMS key ID/ARN to use for backup encryption. Defaults to the account default KMS key when null."
   type        = string
   default     = null
 }
