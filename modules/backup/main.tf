@@ -37,7 +37,7 @@ resource "aws_iam_role_policy_attachment" "backup_restore_policy" {
 
 resource "aws_backup_vault" "this" {
   name        = var.vault_name
-  kms_key_arn = var.kms_key_id
+  kms_key_arn = var.kms_key_arn
   force_destroy   = false
 
   tags = merge(
@@ -48,11 +48,11 @@ resource "aws_backup_vault" "this" {
   )
 }
 
-resource "aws_backup_plan" "alpha_plan" {
-  name = "tf_alpha_backup_plan"
+resource "aws_backup_plan" "this" {
+  name = "${var.vault_name}-backup-plan"
 
   rule {
-    rule_name         = "tf_alpha_backup_rule"
+    rule_name         = "${var.vault_name}-backup-rule"
     target_vault_name = aws_backup_vault.this.name
     schedule          = var.backup_schedule
 
@@ -65,7 +65,7 @@ resource "aws_backup_plan" "alpha_plan" {
 # Create backup selection for resources tagged with backup-enable=true
 resource "aws_backup_selection" "tag_based_true" {
   name         = "${var.vault_name}-tag-true"
-  plan_id      = aws_backup_plan.alpha_plan.id
+  plan_id      = aws_backup_plan.this.id
   iam_role_arn = aws_iam_role.backup_service_role.arn
 
   selection_tag {

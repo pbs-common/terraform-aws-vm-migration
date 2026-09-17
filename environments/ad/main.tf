@@ -221,7 +221,7 @@ module "backup" {
   source = "../../modules/backup"
 
   vault_name            = "ad-backup-vault"
-  kms_key_id            = var.kms_key_id
+  kms_key_arn           = var.kms_key_arn
   backup_schedule       = "cron(0 1 * * ? *)"
   backup_retention_days = 30
   tags                  = var.tags

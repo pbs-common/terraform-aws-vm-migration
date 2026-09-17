@@ -8,8 +8,8 @@ variable "vault_name" {
   }
 }
 
-variable "kms_key_id" {
-  description = "KMS key ID/ARN to use for backup encryption. Defaults to the account default KMS key when null."
+variable "kms_key_arn" {
+  description = "ARN of the KMS key to use for backup encryption. If null, AWS-managed encryption is used."
   type        = string
   default     = null
 }

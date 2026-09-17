@@ -18,7 +18,7 @@ module "backup" {
   source = "./modules/backup"
 
   vault_name  = "my-backup-vault"
-  kms_key_id  = aws_kms_key.backup.id
+  kms_key_arn = aws_kms_key.backup.arn
 
   backup_schedule      = "cron(0 1 * * ? *)"  # Daily at 1 AM UTC
   backup_retention_days = 30
@@ -36,7 +36,7 @@ Resources are selected automatically by checking for the `backup-enable=true` ta
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
 | vault_name | Name of the backup vault | `string` | N/A | yes |
-| kms_key_id | KMS key ID/ARN for customer-managed encryption (AWS-managed encryption used if null) | `string` | `null` | no |
+| kms_key_arn | ARN of the KMS key for customer-managed encryption (AWS-managed encryption used if null) | `string` | `null` | no |
 | backup_schedule | Backup schedule in cron format | `string` | `"cron(0 1 * * ? *)"` | no |
 | backup_retention_days | Days to retain backups | `number` | `30` | no |
 | tags | Tags to apply to resources | `map(string)` | `{}` | no |
