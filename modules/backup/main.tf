@@ -67,7 +67,7 @@ resource "aws_backup_selection" "tag_based_true" {
   name         = "${var.vault_name}-tag-true"
   plan_id      = aws_backup_plan.this.id
   iam_role_arn = aws_iam_role.backup_service_role.arn
-
+  depends_on = [aws_iam_role_policy_attachment.backup_service_policy]
   selection_tag {
     type   = "STRINGEQUALS"
     key    = "backup-enable"
