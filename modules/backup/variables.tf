@@ -3,8 +3,8 @@ variable "vault_name" {
   type        = string
 
   validation {
-    condition     = length(trimspace(var.vault_name)) > 0
-    error_message = "vault_name must not be empty."
+    condition     = length(trimspace(var.vault_name)) > 0 && length("${var.vault_name}-backup-service-role") <= 64
+    error_message = "vault_name must not be empty and must be short enough so that derived IAM role name '${var.vault_name}-backup-service-role' does not exceed 64 characters."
   }
 }
 
