@@ -38,7 +38,7 @@ resource "aws_iam_role_policy_attachment" "backup_restore_policy" {
 resource "aws_backup_vault" "this" {
   name        = var.vault_name
   kms_key_arn = var.kms_key_arn
-  force_destroy   = false
+  force_destroy = false
 
   tags = merge(
     var.tags,
