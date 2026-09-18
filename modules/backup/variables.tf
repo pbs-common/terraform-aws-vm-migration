@@ -44,7 +44,7 @@ variable "weekly_schedule" {
 variable "weekly_retention_days" {
   description = "Number of days to retain weekly backups before deletion."
   type        = number
-  default     = 12
+  default     = 14
 }
 
 variable "tags" {
