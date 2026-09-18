@@ -13,22 +13,22 @@ output "backup_vault_name" {
   value       = aws_backup_vault.this.name
 }
 
-output "incremental_plan_id" {
-  description = "ID of the incremental backup plan"
-  value       = aws_backup_plan.incremental.id
+output "daily_plan_id" {
+  description = "ID of the daily backup plan"
+  value       = aws_backup_plan.daily.id
 }
 
-output "incremental_plan_arn" {
-  description = "ARN of the incremental backup plan"
-  value       = aws_backup_plan.incremental.arn
+output "daily_plan_arn" {
+  description = "ARN of the daily backup plan"
+  value       = aws_backup_plan.daily.arn
 }
 
-output "full_plan_id" {
-  description = "ID of the full backup plan"
-  value       = aws_backup_plan.full.id
+output "weekly_plan_id" {
+  description = "ID of the weekly backup plan"
+  value       = aws_backup_plan.weekly.id
 }
 
-output "full_plan_arn" {
-  description = "ARN of the full backup plan"
-  value       = aws_backup_plan.full.arn
+output "weekly_plan_arn" {
+  description = "ARN of the weekly backup plan"
+  value       = aws_backup_plan.weekly.arn
 }

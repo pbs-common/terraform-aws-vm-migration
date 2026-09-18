@@ -82,26 +82,26 @@ variable "backup_vault_name" {
   default     = "ad-backup-vault"
 }
 
-variable "incremental_schedule" {
-  description = "Backup schedule for incremental backups in cron expression format."
+variable "daily_schedule" {
+  description = "Backup schedule for daily backups in cron expression format."
   type        = string
   default     = "cron(0 0 * * ? *)"
 }
 
-variable "incremental_retention_days" {
-  description = "Number of days to retain incremental backups."
+variable "daily_retention_days" {
+  description = "Number of days to retain daily backups."
   type        = number
   default     = 14
 }
 
-variable "full_schedule" {
-  description = "Backup schedule for full backups in cron expression format."
+variable "weekly_schedule" {
+  description = "Backup schedule for weekly backups in cron expression format."
   type        = string
   default     = "cron(0 0 ? * SAT *)"
 }
 
-variable "full_retention_days" {
-  description = "Number of days to retain full backups."
+variable "weekly_retention_days" {
+  description = "Number of days to retain weekly backups."
   type        = number
-  default     = 12
+  default     = 14
 }

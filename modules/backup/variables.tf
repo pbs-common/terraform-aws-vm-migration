@@ -14,26 +14,26 @@ variable "kms_key_arn" {
   default     = null
 }
 
-variable "incremental_schedule" {
-  description = "Backup schedule for incremental backups in cron expression format. Default is daily at midnight UTC."
+variable "daily_schedule" {
+  description = "Backup schedule for daily backups in cron expression format. Default is every day at midnight UTC."
   type        = string
   default     = "cron(0 0 * * ? *)"
 }
 
-variable "incremental_retention_days" {
-  description = "Number of days to retain incremental backups before deletion."
+variable "daily_retention_days" {
+  description = "Number of days to retain daily backups before deletion."
   type        = number
   default     = 14
 }
 
-variable "full_schedule" {
-  description = "Backup schedule for full backups in cron expression format. Default is Saturday at midnight UTC."
+variable "weekly_schedule" {
+  description = "Backup schedule for weekly backups in cron expression format. Default is Saturday at midnight UTC."
   type        = string
   default     = "cron(0 0 ? * SAT *)"
 }
 
-variable "full_retention_days" {
-  description = "Number of days to retain full backups before deletion."
+variable "weekly_retention_days" {
+  description = "Number of days to retain weekly backups before deletion."
   type        = number
   default     = 12
 }

@@ -48,16 +48,16 @@ resource "aws_backup_vault" "this" {
   )
 }
 
-resource "aws_backup_plan" "incremental" {
-  name = "${var.vault_name}-incremental-plan"
+resource "aws_backup_plan" "daily" {
+  name = "${var.vault_name}-daily-plan"
 
   rule {
-    rule_name         = "${var.vault_name}-incremental-rule"
+    rule_name         = "${var.vault_name}-daily-rule"
     target_vault_name = aws_backup_vault.this.name
-    schedule          = var.incremental_schedule
+    schedule          = var.daily_schedule
 
     lifecycle {
-      delete_after = var.incremental_retention_days
+      delete_after = var.daily_retention_days
     }
   }
 
@@ -69,53 +69,53 @@ resource "aws_backup_plan" "incremental" {
   }
 }
 
-resource "aws_backup_plan" "full" {
-  name = "${var.vault_name}-full-plan"
-
-  rule {
-    rule_name         = "${var.vault_name}-full-rule"
-    target_vault_name = aws_backup_vault.this.name
-    schedule          = var.full_schedule
-
-    lifecycle {
-      delete_after = var.full_retention_days
-    }
-  }
-
-  advanced_backup_setting {
-    backup_options = {
-      WindowsVSS = "disabled"
-    }
-    resource_type = "EC2"
-  }
-}
-
-# Create backup selections for incremental plan
-resource "aws_backup_selection" "incremental" {
-  name         = "${var.vault_name}-incremental-selection"
-  plan_id      = aws_backup_plan.incremental.id
+# Create backup selections for daily plan
+resource "aws_backup_selection" "daily" {
+  name         = "${var.vault_name}-daily-selection"
+  plan_id      = aws_backup_plan.daily.id
   iam_role_arn = aws_iam_role.backup_service_role.arn
 
   depends_on = [aws_iam_role_policy_attachment.backup_service_policy]
 
   selection_tag {
     type   = "STRINGEQUALS"
-    key    = "backup-enable"
+    key    = "daily-backups"
     value  = "true"
   }
 }
 
-# Create backup selections for full plan
-resource "aws_backup_selection" "full" {
-  name         = "${var.vault_name}-full-selection"
-  plan_id      = aws_backup_plan.full.id
+resource "aws_backup_plan" "weekly" {
+  name = "${var.vault_name}-weekly-plan"
+
+  rule {
+    rule_name         = "${var.vault_name}-weekly-rule"
+    target_vault_name = aws_backup_vault.this.name
+    schedule          = var.weekly_schedule
+
+    lifecycle {
+      delete_after = var.weekly_retention_days
+    }
+  }
+
+  advanced_backup_setting {
+    backup_options = {
+      WindowsVSS = "disabled"
+    }
+    resource_type = "EC2"
+  }
+}
+
+# Create backup selections for weekly plan
+resource "aws_backup_selection" "weekly" {
+  name         = "${var.vault_name}-weekly-selection"
+  plan_id      = aws_backup_plan.weekly.id
   iam_role_arn = aws_iam_role.backup_service_role.arn
 
   depends_on = [aws_iam_role_policy_attachment.backup_service_policy]
 
   selection_tag {
     type   = "STRINGEQUALS"
-    key    = "backup-enable"
+    key    = "weekly-backups"
     value  = "true"
   }
 }
