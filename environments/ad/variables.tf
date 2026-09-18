@@ -29,7 +29,7 @@ variable "golden_ami_id" {
 }
 
 variable "tags" {
-  description = "Tags applied to DC1/DC2, merged with an automatic Name tag."
+  description = "Tags applied to resources, merged with an automatic Name tag."
   type        = map(string)
   default     = {}
 }
@@ -68,4 +68,40 @@ variable "key_name" {
   description = "Optional EC2 key pair name, kept as an RDP fallback alongside SSM Session Manager access."
   type        = string
   default     = null
+}
+
+variable "kms_key_arn" {
+  description = "ARN of the KMS key to use for backup encryption. If null, AWS-managed encryption is used."
+  type        = string
+  default     = null
+}
+
+variable "backup_vault_name" {
+  description = "Name of the backup vault."
+  type        = string
+  default     = "ad-backup-vault"
+}
+
+variable "daily_schedule" {
+  description = "Backup schedule for daily backups in cron expression format."
+  type        = string
+  default     = "cron(0 0 * * ? *)"
+}
+
+variable "daily_retention_days" {
+  description = "Number of days to retain daily backups."
+  type        = number
+  default     = 14
+}
+
+variable "weekly_schedule" {
+  description = "Backup schedule for weekly backups in cron expression format."
+  type        = string
+  default     = "cron(0 0 ? * SAT *)"
+}
+
+variable "weekly_retention_days" {
+  description = "Number of days to retain weekly backups."
+  type        = number
+  default     = 14
 }
