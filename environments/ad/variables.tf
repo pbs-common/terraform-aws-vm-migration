@@ -75,3 +75,33 @@ variable "kms_key_arn" {
   type        = string
   default     = null
 }
+
+variable "backup_vault_name" {
+  description = "Name of the backup vault."
+  type        = string
+  default     = "ad-backup-vault"
+}
+
+variable "incremental_schedule" {
+  description = "Backup schedule for incremental backups in cron expression format."
+  type        = string
+  default     = "cron(0 0 * * ? *)"
+}
+
+variable "incremental_retention_days" {
+  description = "Number of days to retain incremental backups."
+  type        = number
+  default     = 14
+}
+
+variable "full_schedule" {
+  description = "Backup schedule for full backups in cron expression format."
+  type        = string
+  default     = "cron(0 0 ? * SAT *)"
+}
+
+variable "full_retention_days" {
+  description = "Number of days to retain full backups."
+  type        = number
+  default     = 12
+}

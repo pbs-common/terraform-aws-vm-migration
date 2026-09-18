@@ -48,26 +48,71 @@ resource "aws_backup_vault" "this" {
   )
 }
 
-resource "aws_backup_plan" "this" {
-  name = "${var.vault_name}-backup-plan"
+resource "aws_backup_plan" "incremental" {
+  name = "${var.vault_name}-incremental-plan"
 
   rule {
-    rule_name         = "${var.vault_name}-backup-rule"
+    rule_name         = "${var.vault_name}-incremental-rule"
     target_vault_name = aws_backup_vault.this.name
-    schedule          = var.backup_schedule
+    schedule          = var.incremental_schedule
 
     lifecycle {
-      delete_after = var.backup_retention_days
+      delete_after = var.incremental_retention_days
     }
+  }
+
+  advanced_backup_setting {
+    backup_options = {
+      WindowsVSS = "disabled"
+    }
+    resource_type = "EC2"
   }
 }
 
-# Create backup selection for resources tagged with backup-enable=true
-resource "aws_backup_selection" "tag_based_true" {
-  name         = "${var.vault_name}-tag-true"
-  plan_id      = aws_backup_plan.this.id
+resource "aws_backup_plan" "full" {
+  name = "${var.vault_name}-full-plan"
+
+  rule {
+    rule_name         = "${var.vault_name}-full-rule"
+    target_vault_name = aws_backup_vault.this.name
+    schedule          = var.full_schedule
+
+    lifecycle {
+      delete_after = var.full_retention_days
+    }
+  }
+
+  advanced_backup_setting {
+    backup_options = {
+      WindowsVSS = "disabled"
+    }
+    resource_type = "EC2"
+  }
+}
+
+# Create backup selections for incremental plan
+resource "aws_backup_selection" "incremental" {
+  name         = "${var.vault_name}-incremental-selection"
+  plan_id      = aws_backup_plan.incremental.id
   iam_role_arn = aws_iam_role.backup_service_role.arn
+
   depends_on = [aws_iam_role_policy_attachment.backup_service_policy]
+
+  selection_tag {
+    type   = "STRINGEQUALS"
+    key    = "backup-enable"
+    value  = "true"
+  }
+}
+
+# Create backup selections for full plan
+resource "aws_backup_selection" "full" {
+  name         = "${var.vault_name}-full-selection"
+  plan_id      = aws_backup_plan.full.id
+  iam_role_arn = aws_iam_role.backup_service_role.arn
+
+  depends_on = [aws_iam_role_policy_attachment.backup_service_policy]
+
   selection_tag {
     type   = "STRINGEQUALS"
     key    = "backup-enable"

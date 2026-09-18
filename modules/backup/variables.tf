@@ -3,8 +3,8 @@ variable "vault_name" {
   type        = string
 
   validation {
-    condition     = length(trimspace(var.vault_name)) > 0 && length("${var.vault_name}-backup-service-role") <= 64 && length("${var.vault_name}-backup-plan") <= 50 && length("${var.vault_name}-backup-rule") <= 50 && length("${var.vault_name}-tag-true") <= 50
-    error_message = "vault_name must not be empty and must keep all derived IAM and AWS Backup names within their length limits."
+    condition     = length(trimspace(var.vault_name)) > 0 && length("${var.vault_name}-backup-service-role") <= 64
+    error_message = "vault_name must not be empty and must keep derived IAM role name within 64 character limit."
   }
 }
 
@@ -14,18 +14,29 @@ variable "kms_key_arn" {
   default     = null
 }
 
-variable "backup_schedule" {
-  description = "Backup schedule in cron expression format. Default is daily at 1 AM UTC."
+variable "incremental_schedule" {
+  description = "Backup schedule for incremental backups in cron expression format. Default is daily at midnight UTC."
   type        = string
-  default     = "cron(0 1 * * ? *)"
+  default     = "cron(0 0 * * ? *)"
 }
 
-variable "backup_retention_days" {
-  description = "Number of days to retain backups before deletion."
+variable "incremental_retention_days" {
+  description = "Number of days to retain incremental backups before deletion."
   type        = number
-  default     = 30
+  default     = 14
 }
 
+variable "full_schedule" {
+  description = "Backup schedule for full backups in cron expression format. Default is Saturday at midnight UTC."
+  type        = string
+  default     = "cron(0 0 ? * SAT *)"
+}
+
+variable "full_retention_days" {
+  description = "Number of days to retain full backups before deletion."
+  type        = number
+  default     = 12
+}
 
 variable "tags" {
   description = "Tags to apply to backup resources."

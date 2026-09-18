@@ -220,9 +220,14 @@ module "dc2" {
 module "backup" {
   source = "../../modules/backup"
 
-  vault_name            = "ad-backup-vault"
-  kms_key_arn           = var.kms_key_arn
-  backup_schedule       = "cron(0 1 * * ? *)"
-  backup_retention_days = 30
-  tags                  = var.tags
+  vault_name  = var.backup_vault_name
+  kms_key_arn = var.kms_key_arn
+
+  incremental_schedule      = var.incremental_schedule
+  incremental_retention_days = var.incremental_retention_days
+
+  full_schedule      = var.full_schedule
+  full_retention_days = var.full_retention_days
+
+  tags = var.tags
 }
