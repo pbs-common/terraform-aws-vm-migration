@@ -206,11 +206,11 @@ module "dc2" {
   instance_type              = var.instance_type
   key_name                   = var.key_name
 
-  root_volume_size           = var.root_volume_size
-  session_log_group_arn      = aws_cloudwatch_log_group.ssm_sessions.arn
+  root_volume_size      = var.root_volume_size
+  session_log_group_arn = aws_cloudwatch_log_group.ssm_sessions.arn
 
-  ingress_rules         = local.ad_ingress_rules
-  security_group_ids    = local.overflow_sg_ids
+  ingress_rules      = local.ad_ingress_rules
+  security_group_ids = local.overflow_sg_ids
 
   patch_group = "ad"
 
@@ -223,11 +223,11 @@ module "backup" {
   vault_name  = var.backup_vault_name
   kms_key_arn = var.kms_key_arn
 
-  daily_schedule       = var.daily_schedule
-  daily_retention      = var.daily_retention
+  daily_schedule  = var.daily_schedule
+  daily_retention = var.daily_retention
 
-  weekly_schedule       = var.weekly_schedule
-  weekly_retention      = var.weekly_retention
+  weekly_schedule  = var.weekly_schedule
+  weekly_retention = var.weekly_retention
 
   tags = var.tags
 }

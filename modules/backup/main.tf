@@ -36,8 +36,8 @@ resource "aws_iam_role_policy_attachment" "backup_restore_policy" {
 }
 
 resource "aws_backup_vault" "this" {
-  name        = var.vault_name
-  kms_key_arn = var.kms_key_arn
+  name          = var.vault_name
+  kms_key_arn   = var.kms_key_arn
   force_destroy = false
 
   tags = merge(
@@ -78,9 +78,9 @@ resource "aws_backup_selection" "daily" {
   depends_on = [aws_iam_role_policy_attachment.backup_service_policy]
 
   selection_tag {
-    type   = "STRINGEQUALS"
-    key    = "daily-backups"
-    value  = "true"
+    type  = "STRINGEQUALS"
+    key   = "daily-backups"
+    value = "true"
   }
 }
 
@@ -114,9 +114,9 @@ resource "aws_backup_selection" "weekly" {
   depends_on = [aws_iam_role_policy_attachment.backup_service_policy]
 
   selection_tag {
-    type   = "STRINGEQUALS"
-    key    = "weekly-backups"
-    value  = "true"
+    type  = "STRINGEQUALS"
+    key   = "weekly-backups"
+    value = "true"
   }
 }
 
