@@ -14,7 +14,7 @@ This module creates and manages AWS Backup resources for automated backup and re
 The module deploys two backup plans:
 
 - **Daily Plan**: Runs every day at midnight UTC, retains backups for 14 days. Target resources with `daily-backups=true` tag.
-- **Weekly Plan**: Runs Saturday at midnight UTC, retains backups for 12 days. Target resources with `weekly-backups=true` tag.
+- **Weekly Plan**: Runs Saturday at midnight UTC, retains backups for 14 days. Target resources with `weekly-backups=true` tag.
 
 ## Usage
 
