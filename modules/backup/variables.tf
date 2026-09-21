@@ -6,12 +6,12 @@ variable "vault_name" {
     condition = (
       can(regex("^[0-9A-Za-z][0-9A-Za-z_.-]{1,49}$", var.vault_name)) &&
       length("${var.vault_name}-backup-service-role") <= 64 &&
-      length("${var.vault_name}-incremental-plan") <= 50 &&
-      length("${var.vault_name}-incremental-rule") <= 50 &&
-      length("${var.vault_name}-full-plan") <= 50 &&
-      length("${var.vault_name}-full-rule") <= 50 &&
-      length("${var.vault_name}-incremental-selection") <= 50 &&
-      length("${var.vault_name}-full-selection") <= 50
+      length("${var.vault_name}-daily-plan") <= 50 &&
+      length("${var.vault_name}-daily-rule") <= 50 &&
+      length("${var.vault_name}-weekly-plan") <= 50 &&
+      length("${var.vault_name}-weekly-rule") <= 50 &&
+      length("${var.vault_name}-daily-selection") <= 50 &&
+      length("${var.vault_name}-weekly-selection") <= 50
     )
     error_message = "vault_name must be 2-50 characters of letters, numbers, periods, underscores, or hyphens, and must keep derived IAM role, backup plan, backup rule, and backup selection names within AWS length limits."
   }
