@@ -63,7 +63,7 @@ resource "aws_backup_plan" "daily" {
 
   advanced_backup_setting {
     backup_options = {
-      WindowsVSS = "disabled"
+      WindowsVSS = "enabled"
     }
     resource_type = "EC2"
   }
@@ -99,7 +99,7 @@ resource "aws_backup_plan" "weekly" {
 
   advanced_backup_setting {
     backup_options = {
-      WindowsVSS = "disabled"
+      WindowsVSS = "enabled"
     }
     resource_type = "EC2"
   }
