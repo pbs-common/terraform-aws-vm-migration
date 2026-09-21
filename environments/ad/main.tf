@@ -224,10 +224,10 @@ module "backup" {
   kms_key_arn = var.kms_key_arn
 
   daily_schedule       = var.daily_schedule
-  daily_retention_days = var.daily_retention_days
+  daily_retention = var.daily_retention
 
   weekly_schedule       = var.weekly_schedule
-  weekly_retention_days = var.weekly_retention_days
+  weekly_retention = var.weekly_retention
 
   tags = var.tags
 }

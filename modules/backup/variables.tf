@@ -29,7 +29,7 @@ variable "daily_schedule" {
   default     = "cron(0 0 * * ? *)"
 }
 
-variable "daily_retention_days" {
+variable "daily_retention" {
   description = "Number of days to retain daily backups before deletion."
   type        = number
   default     = 14
@@ -41,7 +41,7 @@ variable "weekly_schedule" {
   default     = "cron(0 0 ? * SAT *)"
 }
 
-variable "weekly_retention_days" {
+variable "weekly_retention" {
   description = "Number of days to retain weekly backups before deletion."
   type        = number
   default     = 14

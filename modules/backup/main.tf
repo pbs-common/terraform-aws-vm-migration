@@ -57,7 +57,7 @@ resource "aws_backup_plan" "daily" {
     schedule          = var.daily_schedule
 
     lifecycle {
-      delete_after = var.daily_retention_days
+      delete_after = var.daily_retention
     }
   }
 
@@ -93,7 +93,7 @@ resource "aws_backup_plan" "weekly" {
     schedule          = var.weekly_schedule
 
     lifecycle {
-      delete_after = var.weekly_retention_days
+      delete_after = var.weekly_retention
     }
   }
 
