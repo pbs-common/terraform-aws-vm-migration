@@ -4,7 +4,7 @@ variable "vault_name" {
 
   validation {
     condition = (
-      can(regex("^[0-9A-Za-z][0-9A-Za-z_.-]{1,49}$", var.vault_name)) &&
+      can(regex("^[0-9A-Za-z][0-9A-Za-z_-]{1,49}$", var.vault_name)) &&
       length("${var.vault_name}-backup-service-role") <= 64 &&
       length("${var.vault_name}-daily-plan") <= 50 &&
       length("${var.vault_name}-daily-rule") <= 50 &&
