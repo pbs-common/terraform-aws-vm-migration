@@ -13,7 +13,7 @@ variable "vault_name" {
       length("${var.vault_name}-daily-selection") <= 50 &&
       length("${var.vault_name}-weekly-selection") <= 50
     )
-    error_message = "vault_name must be 2-50 characters of letters, numbers, periods, underscores, or hyphens, and must keep derived IAM role, backup plan, backup rule, and backup selection names within AWS length limits."
+    error_message = "vault_name must be 2-50 characters of letters, numbers, underscores, or hyphens, and must keep derived IAM role, backup plan, backup rule, and backup selection names within AWS length limits."
   }
 }
 
