@@ -50,16 +50,27 @@ def clone_repo(dest: Path) -> Path:
     return root
 
 
-def edit(path: Path, old: str, new: str) -> None:
-    """Replace `old` with `new`, asserting it appeared exactly once."""
+def edit(path: Path, old: str, new: str, *, expect: int = 1, only: int | None = None) -> None:
+    """Replace `old` with `new`, asserting it appeared exactly `expect` times.
+
+    ad.yaml repeats its path list under `push` and `pull_request`, so a filter line occurs
+    twice; `expect=2` mutates both, which is what "edit both or neither" means. `only=N`
+    mutates just the Nth (1-based) occurrence, for a mutation that must reach one trigger
+    and not the other.
+    """
     text = path.read_text(encoding="utf-8")
     count = text.count(old)
-    if count != 1:
+    if count != expect:
         raise AssertionError(
-            f"mutation anchor matched {count} times in {path} (expected 1); the mutation "
-            f"did NOT apply as intended, so any verdict from this case is meaningless"
+            f"mutation anchor matched {count} times in {path} (expected {expect}); the "
+            f"mutation did NOT apply as intended, so any verdict from this case is meaningless"
         )
-    path.write_text(text.replace(old, new), encoding="utf-8")
+    if only is None:
+        text = text.replace(old, new)
+    else:
+        parts = text.split(old)
+        text = old.join(parts[:only]) + new + old.join(parts[only:])
+    path.write_text(text, encoding="utf-8")
 
 
 class CheckerSelfTest(unittest.TestCase):
@@ -109,13 +120,14 @@ class CheckerSelfTest(unittest.TestCase):
         (new / "main.tf").write_text('variable "x" { type = string }\n')
         edit(self.repo / ".github/workflows/ad.yaml",
              '      - "modules/ssm-session-access-policy/**"\n',
-             '      - "modules/ssm-session-access-policy/**"\n      - "modules/unconsumed/**"\n')
+             '      - "modules/ssm-session-access-policy/**"\n      - "modules/unconsumed/**"\n',
+             expect=2)
         self.assert_rejected("modules/unconsumed: contains Terraform but no workflow")
 
     # ---- check 3: a module consumed by a planned environment but unfiltered -------
     def test_dropping_a_consumed_module_from_the_filters_is_rejected(self) -> None:
         edit(self.repo / ".github/workflows/ad.yaml",
-             '      - "modules/ssm-session-access-policy/**"\n', "")
+             '      - "modules/ssm-session-access-policy/**"\n', "", expect=2)
         self.assert_rejected("consumes modules/ssm-session-access-policy")
 
     def test_a_newly_consumed_module_must_be_filtered(self) -> None:
@@ -129,11 +141,12 @@ class CheckerSelfTest(unittest.TestCase):
 
     # ---- check 4: shared inputs that decide what the plan and lint DO ------------
     def test_dropping_the_tflint_config_from_the_filters_is_rejected(self) -> None:
-        edit(self.repo / ".github/workflows/ad.yaml", '      - ".tflint.hcl"\n', "")
+        edit(self.repo / ".github/workflows/ad.yaml", '      - ".tflint.hcl"\n', "", expect=2)
         self.assert_rejected("no paths filter fires for .tflint.hcl")
 
     def test_dropping_the_reusable_workflows_from_the_filters_is_rejected(self) -> None:
-        edit(self.repo / ".github/workflows/ad.yaml", '      - ".github/workflows/**"\n', "")
+        edit(self.repo / ".github/workflows/ad.yaml", '      - ".github/workflows/**"\n', "",
+             expect=2)
         self.assert_rejected(".github/workflows/terraform-plan.yaml")
 
     # ---- check 1: tflint running without a usable config ------------------------
@@ -232,16 +245,17 @@ class CheckerSelfTest(unittest.TestCase):
         self.assert_rejected("no unfiltered workflow runs tflint in each directory")
 
     # ---- check 3/coverage: a job gated off for pull requests is not coverage -----
+    # plan-ad is unconditional, so these gate it off rather than rewriting an existing if:.
+    PLAN_AD_HEADER = "  plan-ad:\n    name: Plan AD Environment\n    needs: validate-ad\n"
+
     def test_a_plan_job_gated_off_for_pull_requests_is_not_coverage(self) -> None:
-        edit(self.repo / ".github/workflows/ad.yaml",
-             "    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'\n",
-             "    if: github.event_name == 'push'\n")
+        edit(self.repo / ".github/workflows/ad.yaml", self.PLAN_AD_HEADER,
+             self.PLAN_AD_HEADER + "    if: github.event_name == 'push'\n")
         self.assert_rejected("environments/ad: contains Terraform but no workflow")
 
     def test_an_unmodelled_if_condition_is_rejected(self) -> None:
-        edit(self.repo / ".github/workflows/ad.yaml",
-             "    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'\n",
-             "    if: success() && github.event_name == 'pull_request'\n")
+        edit(self.repo / ".github/workflows/ad.yaml", self.PLAN_AD_HEADER,
+             self.PLAN_AD_HEADER + "    if: success() && github.event_name == 'pull_request'\n")
         self.assert_rejected("cannot evaluate")
 
     # ---- check 5: the manifest, the filters and the directories going stale ------
@@ -269,16 +283,20 @@ class CheckerSelfTest(unittest.TestCase):
     def test_path_filter_matching_nothing_is_rejected(self) -> None:
         edit(self.repo / ".github/workflows/ad.yaml",
              '      - "environments/ad/**"\n',
-             '      - "environments/ad/**"\n      - "modules/renamed-away/**"\n')
+             '      - "environments/ad/**"\n      - "modules/renamed-away/**"\n',
+             expect=2)
         self.assert_rejected("matches nothing on disk")
 
     def test_a_stale_PUSH_filter_is_rejected(self) -> None:
         """Filters live on push as well as pull_request. Reading only pull_request let a
         stale push filter silently stop the main-branch plan while the checker reported
         every filter healthy."""
+        # Added INTO push's existing list, not as a second `paths:` key -- PyYAML keeps only
+        # the last of a duplicated key, which would discard the mutation silently.
         edit(self.repo / ".github/workflows/ad.yaml",
-             "  push:\n    branches:\n      - main\n",
-             '  push:\n    branches:\n      - main\n    paths:\n      - "modules/gone-away/**"\n')
+             '      - "environments/ad/**"\n',
+             '      - "environments/ad/**"\n      - "modules/gone-away/**"\n',
+             expect=2, only=1)
         self.assert_rejected("matches nothing on disk")
 
     def test_a_stale_filter_in_a_PUSH_ONLY_workflow_is_rejected(self) -> None:
@@ -316,13 +334,14 @@ class CheckerSelfTest(unittest.TestCase):
     def test_unsupported_glob_shape_is_rejected(self) -> None:
         edit(self.repo / ".github/workflows/ad.yaml",
              '      - "environments/ad/**"\n',
-             '      - "environments/ad/**"\n      - "modules/*/main.tf"\n')
+             '      - "environments/ad/**"\n      - "modules/*/main.tf"\n',
+             expect=2)
         self.assert_rejected("glob syntax this script does not model")
 
     def test_paths_ignore_on_pull_request_is_rejected(self) -> None:
         edit(self.repo / ".github/workflows/ad.yaml",
-             "  pull_request:\n    paths:\n",
-             '  pull_request:\n    paths-ignore:\n      - "docs/**"\n    paths:\n')
+             "  pull_request:\n    branches:\n      - main\n",
+             '  pull_request:\n    branches:\n      - main\n    paths-ignore:\n      - "docs/**"\n')
         self.assert_rejected("paths-ignore is not modelled")
 
     def test_unparseable_workflow_is_rejected(self) -> None:
@@ -447,12 +466,13 @@ class ConditionEvaluator(unittest.TestCase):
                 self.assertFalse(checker.evaluate_condition(expr, self.PR))
 
     def test_the_real_ad_yaml_conditions_evaluate_as_observed(self) -> None:
-        """Ground the evaluator in the file it judges, and in what actually happened:
-        plan-ad DID run on PR #40, apply-ad did not."""
+        """Ground the evaluator in the file it judges: plan-ad runs for every trigger
+        ad.yaml declares, apply-ad never runs on a pull request."""
         import yaml
         doc = yaml.safe_load((REPO / ".github/workflows/ad.yaml").read_text())
         jobs = doc["jobs"]
-        self.assertTrue(checker.evaluate_condition(jobs["plan-ad"]["if"], self.PR))
+        self.assertNotIn("if", jobs["plan-ad"],
+                         "plan-ad is unconditional; gating it off would uncover environments/ad")
         self.assertFalse(checker.evaluate_condition(jobs["apply-ad"]["if"], self.PR))
 
     def test_unmodelled_expressions_raise_rather_than_defaulting(self) -> None:
