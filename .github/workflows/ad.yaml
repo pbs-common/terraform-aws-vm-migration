@@ -40,6 +40,7 @@ on:
       - "environments/ad/**"
       - "modules/ec2-windows-workload/**"
       - "modules/ssm-session-access-policy/**"
+      - "modules/backup/**"
       - ".tflint.hcl"
       - ".github/workflows/**"
 
