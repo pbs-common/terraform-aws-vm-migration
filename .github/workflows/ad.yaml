@@ -1,13 +1,19 @@
-name: AD Environment Plan
+name: AD Environment
 
 on:
   workflow_dispatch:
 
+  # The two path lists below are identical and must stay that way. GitHub Actions does
+  # not support YAML anchors, so there is no way to write it once. Both are checked:
+  # check_terraform_ci_coverage.py reads `push` as well as `pull_request` (CHANGE_TRIGGERS)
+  # and fails when a filter stops matching anything on disk.
   push:
     branches:
       - main
-
-  pull_request:
+    # Without this, every commit landing on main -- a README edit, a scripts/ change --
+    # would plan and APPLY against the AD account, because plan-ad is no longer gated off
+    # for push. A merge should only reach AWS when it touched something that changes the
+    # plan.
     paths:
       # Every module environments/ad consumes must appear here, or editing that module
       # changes this plan and triggers nothing. ssm-session-access-policy was missing
@@ -25,10 +31,31 @@ on:
       - ".tflint.hcl"
       - ".github/workflows/**"
 
+  pull_request:
+    branches:
+      - main
+    # Identical to push.paths above, where the reasoning for each entry is recorded.
+    # Edit both or neither.
+    paths:
+      - "environments/ad/**"
+      - "modules/ec2-windows-workload/**"
+      - "modules/ssm-session-access-policy/**"
+      - "modules/backup/**"
+      - ".tflint.hcl"
+      - ".github/workflows/**"
+
 permissions:
   contents: read
   pull-requests: write
   id-token: write
+
+# A merge to main reaches `terraform apply` once approved, so two merges in quick succession
+# can race the same state. cancel-in-progress is false deliberately: cancelling a run
+# mid-apply strands the S3 native lock (use_lockfile = true) next to the state object, which
+# someone then has to clear by hand. Queueing is the cheaper failure.
+concurrency:
+  group: terraform-ad-${{ github.ref }}
+  cancel-in-progress: false
 
 
 jobs:
@@ -41,13 +68,12 @@ jobs:
       working_directory: environments/ad
       runs_on: ubuntu-latest
 
-  # Step 2: Plan Terraform changes.
+  # Step 2: Plan Terraform changes. Unconditional on purpose -- it runs for every trigger
+  # this workflow declares. The tfplan artifact it uploads is what apply-ad consumes.
   plan-ad:
     name: Plan AD Environment
     needs: validate-ad
     uses: ./.github/workflows/terraform-plan.yaml
-    # Only apply on main branch (not on PRs)
-    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
     with:
       terraform_version: "1.16.0"
       tflint_version: "0.64.0"
@@ -62,13 +88,18 @@ jobs:
       OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
       TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
 
-  # Step 3: Apply the plan artifact produced by plan-ad, main branch only.
+  # Step 3: Apply the plan artifact produced by plan-ad in THIS run. Merge to main, or a
+  # manual dispatch from main. Reaching this job does not apply anything:
+  # terraform-apply.yaml declares `environment: ad`, whose required reviewers hold it at
+  # "Waiting" until someone approves. Pull requests never reach it -- on a PR the ref is
+  # refs/pull/<n>/merge, never refs/heads/main.
   apply-ad:
     name: Apply AD Environment
     needs: plan-ad
     uses: ./.github/workflows/terraform-apply.yaml
-    # Only apply on main branch (not on PRs)
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    if: >-
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     with:
       terraform_version: "1.16.0"
       aws_region: us-east-1
