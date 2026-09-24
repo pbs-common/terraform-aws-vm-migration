@@ -65,6 +65,8 @@ resource "aws_backup_plan" "daily" {
     lifecycle {
       delete_after = var.daily_retention
     }
+
+    recovery_point_tags = var.tags
   }
 
   advanced_backup_setting {
@@ -73,6 +75,13 @@ resource "aws_backup_plan" "daily" {
     }
     resource_type = "EC2"
   }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.vault_name}-daily-plan"
+    }
+  )
 }
 
 # Create backup selections for daily plan
@@ -101,6 +110,8 @@ resource "aws_backup_plan" "weekly" {
     lifecycle {
       delete_after = var.weekly_retention
     }
+
+    recovery_point_tags = var.tags
   }
 
   advanced_backup_setting {
@@ -109,6 +120,13 @@ resource "aws_backup_plan" "weekly" {
     }
     resource_type = "EC2"
   }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.vault_name}-weekly-plan"
+    }
+  )
 }
 
 # Create backup selections for weekly plan
