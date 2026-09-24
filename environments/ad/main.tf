@@ -184,7 +184,9 @@ module "dc1" {
 
   patch_group = "ad"
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    daily_backups = "true"
+  })
 }
 
 module "ssm_session_access" {
@@ -214,7 +216,9 @@ module "dc2" {
 
   patch_group = "ad"
 
-  tags = var.tags
+  tags = merge(var.tags, {
+    daily_backups = "true"
+  })
 }
 
 module "backup" {
