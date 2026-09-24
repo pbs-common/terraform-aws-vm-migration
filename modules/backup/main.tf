@@ -80,6 +80,13 @@ resource "aws_backup_plan" "daily" {
     }
     resource_type = "EC2"
   }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.vault_name}-daily-plan"
+    }
+  )
 }
 
 # Create backup selections for daily plan
@@ -123,6 +130,13 @@ resource "aws_backup_plan" "weekly" {
     }
     resource_type = "EC2"
   }
+
+  tags = merge(
+    var.tags,
+    {
+      Name = "${var.vault_name}-weekly-plan"
+    }
+  )
 }
 
 # Create backup selections for weekly plan
