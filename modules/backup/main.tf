@@ -66,12 +66,7 @@ resource "aws_backup_plan" "daily" {
       delete_after = var.daily_retention
     }
 
-    recovery_point_tags = merge(
-      var.tags,
-      {
-        Name = "${var.vault_name}-daily-recovery-point"
-      }
-    )
+    recovery_point_tags = var.tags
   }
 
   advanced_backup_setting {
@@ -116,12 +111,7 @@ resource "aws_backup_plan" "weekly" {
       delete_after = var.weekly_retention
     }
 
-    recovery_point_tags = merge(
-      var.tags,
-      {
-        Name = "${var.vault_name}-weekly-recovery-point"
-      }
-    )
+    recovery_point_tags = var.tags
   }
 
   advanced_backup_setting {
