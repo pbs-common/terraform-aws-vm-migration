@@ -229,5 +229,7 @@ module "backup" {
   weekly_schedule  = var.weekly_schedule
   weekly_retention = var.weekly_retention
 
+  windows_vss      = var.windows_vss
+
   tags = var.tags
 }

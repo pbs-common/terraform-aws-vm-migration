@@ -47,6 +47,12 @@ variable "weekly_retention" {
   default     = 14
 }
 
+variable "windows_vss" {
+  description = "Enable Windows VSS for backups. Set to 'enabled' to enable."
+  type        = string
+  default     = "disabled"
+}
+
 variable "tags" {
   description = "Tags to apply to backup resources."
   type        = map(string)

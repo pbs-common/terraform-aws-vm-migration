@@ -105,3 +105,9 @@ variable "weekly_retention" {
   type        = number
   default     = 14
 }
+
+variable "windows_vss" {
+  description = "Enable Windows VSS for backups. Set to 'enabled' to enable."
+  type        = string
+  default     = "disabled"
+}
