@@ -32,7 +32,7 @@ resource "aws_iam_role_policy_attachment" "backup_service_policy" {
 # Additional policy required for backing up S3
 resource "aws_iam_role_policy_attachment" "backup_s3_backup_policy" {
   role       = aws_iam_role.backup_service_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForS3Backup"
+  policy_arn = "arn:aws:iam::aws:policy/AWSBackupServiceRolePolicyForS3Backup"
 }
 
 # Attach restore policy if needed
