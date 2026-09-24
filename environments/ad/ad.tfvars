@@ -16,6 +16,7 @@ tags = {
   "pbs:billing:product"     = "active-directory"
   "pbs:billing:owner"       = "infra"
   "repo"                    = "https://github.com/pbs-common/terraform-aws-vm-migration.git"
+  "daily_backups"           = "enabled"
 }
 
 # 20 AD port entries per CIDR, 60 inbound rules per SG => 3 CIDRs max per SG.

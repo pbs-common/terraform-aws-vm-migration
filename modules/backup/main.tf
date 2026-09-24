@@ -29,6 +29,12 @@ resource "aws_iam_role_policy_attachment" "backup_service_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
 }
 
+# Additional policy required for backing up S3
+resource "aws_iam_role_policy_attachment" "backup_s3_backup_policy" {
+  role       = aws_iam_role.backup_service_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForS3Backup"
+}
+
 # Attach restore policy if needed
 resource "aws_iam_role_policy_attachment" "backup_restore_policy" {
   role       = aws_iam_role.backup_service_role.name
@@ -63,7 +69,7 @@ resource "aws_backup_plan" "daily" {
 
   advanced_backup_setting {
     backup_options = {
-      WindowsVSS = "enabled"
+      WindowsVSS = var.windows_vss
     }
     resource_type = "EC2"
   }
@@ -79,7 +85,7 @@ resource "aws_backup_selection" "daily" {
 
   selection_tag {
     type  = "STRINGEQUALS"
-    key   = "daily-backups"
+    key   = "daily_backups"
     value = "true"
   }
 }
@@ -99,7 +105,7 @@ resource "aws_backup_plan" "weekly" {
 
   advanced_backup_setting {
     backup_options = {
-      WindowsVSS = "enabled"
+      WindowsVSS = var.windows_vss
     }
     resource_type = "EC2"
   }
@@ -115,7 +121,7 @@ resource "aws_backup_selection" "weekly" {
 
   selection_tag {
     type  = "STRINGEQUALS"
-    key   = "weekly-backups"
+    key   = "weekly_backups"
     value = "true"
   }
 }

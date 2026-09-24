@@ -13,12 +13,12 @@ This module creates and manages AWS Backup resources for automated backup and re
 
 The module deploys two backup plans:
 
-- **Daily Plan**: Runs every day at midnight UTC, retains backups for 14 days. Target resources with `daily-backups=true` tag.
-- **Weekly Plan**: Runs Saturday at midnight UTC, retains backups for 14 days. Target resources with `weekly-backups=true` tag.
+- **Daily Plan**: Runs every day at midnight UTC, retains backups for 14 days. Target resources with `daily_backups=true` tag.
+- **Weekly Plan**: Runs Saturday at midnight UTC, retains backups for 14 days. Target resources with `weekly_backups=true` tag.
 
 ## Usage
 
-Tag resources with `daily-backups=true` and/or `weekly-backups=true`, then reference this module:
+Tag resources with `daily_backups=true` and/or `weekly_backups=true`, then reference this module:
 
 ```hcl
 module "backup" {
@@ -33,13 +33,19 @@ module "backup" {
   weekly_schedule      = "cron(0 0 ? * SAT *)"   # Saturday at midnight UTC
   weekly_retention = 12
 
+  windows_vss = "enabled"
+
   tags = {
     Environment = "prod"
   }
 }
 ```
 
-Resources are selected automatically by checking for `daily-backups=true` (for daily plan) or `weekly-backups=true` (for weekly plan) tags.
+Resources are selected automatically by checking for `daily_backups=true` (for daily plan) or `weekly_backups=true` (for weekly plan) tags.
+
+**If `windows_vss` is enabled, it will only apple to EC2 instances that have the `ec2 vss agent` installed.**
+
+**In order to backup S3, versioning MUST be enabled on the bucket.**
 
 ## Inputs
 
@@ -52,6 +58,7 @@ Resources are selected automatically by checking for `daily-backups=true` (for d
 | weekly_schedule | Backup schedule for weekly backups in cron format | `string` | `"cron(0 0 ? * SAT *)"` | no |
 | weekly_retention | Days to retain weekly backups | `number` | `14` | no |
 | tags | Tags to apply to resources | `map(string)` | `{}` | no |
+| windows_vss | Whether windows_vss is enabled for EC2 instance backups | `string 'enabled' or 'disabled'` | `disabled` | no |
 
 ## Outputs
 
