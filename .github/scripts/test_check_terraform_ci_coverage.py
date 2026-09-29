@@ -352,10 +352,10 @@ class CheckerSelfTest(unittest.TestCase):
     def test_terraform_nested_below_an_inventory_root_is_rejected(self) -> None:
         """The inventory models immediate children only. A nested directory would be
         neither covered nor excluded while the invariant claims to cover everything."""
-        nested = self.repo / "modules" / "ec2-windows-workload" / "submodule"
+        nested = self.repo / "modules" / "ec2-workload" / "submodule"
         nested.mkdir()
         (nested / "main.tf").write_text('variable "x" { type = string }\n')
-        self.assert_rejected("Terraform nested below modules/ec2-windows-workload")
+        self.assert_rejected("Terraform nested below modules/ec2-workload")
 
     # ---- vacuity: an empty inventory must not agree with everything ---------------
     def test_empty_inventory_root_is_rejected(self) -> None:

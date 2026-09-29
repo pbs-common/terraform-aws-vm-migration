@@ -16,8 +16,7 @@ locals {
     { description = "Kerberos password change (TCP)", from_port = 464, to_port = 464, protocol = "tcp" },
     { description = "Kerberos password change (UDP)", from_port = 464, to_port = 464, protocol = "udp" },
     { description = "LDAPS (TCP)", from_port = 636, to_port = 636, protocol = "tcp" },
-    { description = "LDAP GC (TCP)", from_port = 3268, to_port = 3268, protocol = "tcp" },
-    { description = "LDAPS GC (TCP)", from_port = 3269, to_port = 3269, protocol = "tcp" },
+    { description = "Global Catalog LDAP/LDAPS (TCP)", from_port = 3268, to_port = 3269, protocol = "tcp" },
     { description = "RPC dynamic port range (TCP)", from_port = 49152, to_port = 65535, protocol = "tcp" },
     { description = "RDP", from_port = 3389, to_port = 3389, protocol = "tcp" },
     { description = "ICMP", from_port = -1, to_port = -1, protocol = "icmp" }
@@ -31,11 +30,12 @@ locals {
 
   ad_ingress_rules = [
     for pair in setproduct(local.ad_ports, local.allowed_cidr_blocks) : {
-      description = "${pair[0].description} from ${pair[1]}"
-      from_port   = pair[0].from_port
-      to_port     = pair[0].to_port
-      protocol    = pair[0].protocol
-      cidr_blocks = [pair[1]]
+      description     = "${pair[0].description} from ${pair[1]}"
+      from_port       = pair[0].from_port
+      to_port         = pair[0].to_port
+      protocol        = pair[0].protocol
+      cidr_blocks     = [pair[1]]
+      prefix_list_ids = []
     }
   ]
 
@@ -166,10 +166,56 @@ resource "aws_ssm_document" "session_manager_prefs" {
   tags = var.tags
 }
 
+# ADWS (TCP/9389) for Azure/AWS, scoped to just this port via prefix lists so
+# it doesn't open every AD port to these broad CIDRs.
+locals {
+  adws_ingress_rules = concat(
+    length(var.azure_cidr_blocks) > 0 ? [{
+      description     = "AD Web Services / ADWS (TCP) from azure-cidrs"
+      from_port       = 9389
+      to_port         = 9389
+      protocol        = "tcp"
+      cidr_blocks     = []
+      prefix_list_ids = [module.azure_cidrs[0].id]
+    }] : [],
+    length(var.aws_shared_cidr_blocks) > 0 ? [{
+      description     = "AD Web Services / ADWS (TCP) from aws-shared-cidrs"
+      from_port       = 9389
+      to_port         = 9389
+      protocol        = "tcp"
+      cidr_blocks     = []
+      prefix_list_ids = [module.aws_shared_cidrs[0].id]
+    }] : [],
+  )
+}
+
+module "azure_cidrs" {
+  source = "../../modules/managed-prefix-list"
+  count  = length(var.azure_cidr_blocks) > 0 ? 1 : 0
+
+  name        = "azure-cidrs"
+  max_entries = length(var.azure_cidr_blocks)
+  entries     = [for cidr in var.azure_cidr_blocks : { cidr = cidr }]
+
+  tags = var.tags
+}
+
+module "aws_shared_cidrs" {
+  source = "../../modules/managed-prefix-list"
+  count  = length(var.aws_shared_cidr_blocks) > 0 ? 1 : 0
+
+  name        = "aws-shared-cidrs"
+  max_entries = length(var.aws_shared_cidr_blocks)
+  entries     = [for cidr in var.aws_shared_cidr_blocks : { cidr = cidr }]
+
+  tags = var.tags
+}
+
 module "dc1" {
-  source = "../../modules/ec2-windows-workload"
+  source = "../../modules/ec2-workload"
 
   name                       = "dc1"
+  os_family                  = "windows"
   ami_id                     = var.golden_ami_id
   private_subnet_name_prefix = var.private_subnet_name_prefix
   availability_zone          = var.dc1_availability_zone
@@ -179,7 +225,7 @@ module "dc1" {
   root_volume_size      = var.root_volume_size
   session_log_group_arn = aws_cloudwatch_log_group.ssm_sessions.arn
 
-  ingress_rules      = local.ad_ingress_rules
+  ingress_rules      = concat(local.ad_ingress_rules, local.adws_ingress_rules)
   security_group_ids = local.overflow_sg_ids
 
   patch_group = "ad"
@@ -199,9 +245,10 @@ module "ssm_session_access" {
 }
 
 module "dc2" {
-  source = "../../modules/ec2-windows-workload"
+  source = "../../modules/ec2-workload"
 
   name                       = "dc2"
+  os_family                  = "windows"
   ami_id                     = var.golden_ami_id
   private_subnet_name_prefix = var.private_subnet_name_prefix
   availability_zone          = var.dc2_availability_zone
@@ -211,7 +258,7 @@ module "dc2" {
   root_volume_size      = var.root_volume_size
   session_log_group_arn = aws_cloudwatch_log_group.ssm_sessions.arn
 
-  ingress_rules      = local.ad_ingress_rules
+  ingress_rules      = concat(local.ad_ingress_rules, local.adws_ingress_rules)
   security_group_ids = local.overflow_sg_ids
 
   patch_group = "ad"

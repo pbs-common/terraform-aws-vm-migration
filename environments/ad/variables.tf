@@ -64,6 +64,18 @@ variable "overflow2_cidr_blocks" {
   default     = []
 }
 
+variable "azure_cidr_blocks" {
+  description = "Azure CIDR blocks granted TCP/9389 (ADWS) access to the DCs via a managed prefix list."
+  type        = list(string)
+  default     = []
+}
+
+variable "aws_shared_cidr_blocks" {
+  description = "AWS-side CIDR blocks granted TCP/9389 (ADWS) access to the DCs via a managed prefix list."
+  type        = list(string)
+  default     = []
+}
+
 variable "key_name" {
   description = "Optional EC2 key pair name, kept as an RDP fallback alongside SSM Session Manager access."
   type        = string

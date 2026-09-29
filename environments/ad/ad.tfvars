@@ -29,6 +29,10 @@ overflow_cidr_blocks = ["10.190.4.0/24", "10.191.4.0/24", "10.164.0.0/16"]
 
 overflow2_cidr_blocks = ["10.64.0.0/16"]
 
+# ADWS (TCP/9389) access, PBSMAP-309
+azure_cidr_blocks      = ["10.190.0.0/16", "10.191.0.0/16"]
+aws_shared_cidr_blocks = ["10.202.0.0/16"]
+
 key_name = null
 
 # MGN Configuration
