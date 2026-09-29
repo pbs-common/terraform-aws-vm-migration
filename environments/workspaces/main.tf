@@ -14,3 +14,44 @@ module "backup" {
 
   tags = var.tags
 }
+
+# Migrated instances from MGN
+resource "aws_instance" "s_ghsd01_dat1_w" {
+}
+
+import {
+  to = aws_instance.s_ghsd01_dat1_w
+  id = "i-062c6c56e0ea43a52"
+}
+
+resource "aws_instance" "s_sits01_dat1_x" {
+}
+
+import {
+  to = aws_instance.s_sits01_dat1_x
+  id = "i-0f15f3836d730abb6"
+}
+
+resource "aws_instance" "i_ng_ws_sm_t1_w" {
+}
+
+import {
+  to = aws_instance.i_ng_ws_sm_t1_w
+  id = "i-03cd76dd517b2efb6"
+}
+
+resource "aws_instance" "i_ng_ws_bb_t1_w" {
+}
+
+import {
+  to = aws_instance.i_ng_ws_bb_t1_w
+  id = "i-037e76172f90efc2d"
+}
+
+resource "aws_instance" "i_ng_ws_zc_t1_l" {
+}
+
+import {
+  to = aws_instance.i_ng_ws_zc_t1_l
+  id = "i-03d447ddfcf97efe7"
+}
