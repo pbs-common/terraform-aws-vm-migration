@@ -26,7 +26,7 @@ resource "aws_instance" "i_ng_ws_zc_t1_l" {
     "map-migrated"                                 = "mig5T578AWUOW"
     "mgn.amazonaws.com-job"                        = "mgnjob-3fc50c58093c83b9e"
     "mgn.amazonaws.com-source-server"              = "s-378ee4e9007b8f159"
-    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:environment"                      = "workspaces"
     "pbs:billing:owner"                            = "Zheng-Dhong"
     "pbs:billing:product"                          = "Workstation"
   }
@@ -37,7 +37,7 @@ resource "aws_instance" "i_ng_ws_zc_t1_l" {
     "map-migrated"                                 = "mig5T578AWUOW"
     "mgn.amazonaws.com-job"                        = "mgnjob-3fc50c58093c83b9e"
     "mgn.amazonaws.com-source-server"              = "s-378ee4e9007b8f159"
-    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:environment"                      = "workspaces"
     "pbs:billing:owner"                            = "Zheng-Dhong"
     "pbs:billing:product"                          = "Workstation"
   }
