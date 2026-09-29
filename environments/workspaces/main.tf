@@ -17,6 +17,7 @@ module "backup" {
 
 # Migrated instances from MGN
 resource "aws_instance" "s_ghsd01_dat1_w" {
+  ami = "ami-0d16ebbf0d8306d63"
 }
 
 import {
@@ -25,6 +26,7 @@ import {
 }
 
 resource "aws_instance" "s_sits01_dat1_x" {
+  instance_type = "m5.xlarge"
 }
 
 import {
@@ -33,6 +35,7 @@ import {
 }
 
 resource "aws_instance" "i_ng_ws_sm_t1_w" {
+  ami = "ami-0d16ebbf0d8306d63"
 }
 
 import {
@@ -41,6 +44,7 @@ import {
 }
 
 resource "aws_instance" "i_ng_ws_bb_t1_w" {
+  ami = "ami-0d16ebbf0d8306d63"
 }
 
 import {
@@ -49,6 +53,7 @@ import {
 }
 
 resource "aws_instance" "i_ng_ws_zc_t1_l" {
+  instance_type = "m5.xlarge"
 }
 
 import {
