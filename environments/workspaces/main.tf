@@ -19,6 +19,28 @@ module "backup" {
 resource "aws_instance" "s_ghsd01_dat1_w" {
   ami           = "ami-0d16ebbf0d8306d63"
   instance_type = "m5.xlarge"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-369955e3abd2ae164"
+    "Name"                                         = "s-ghsd01-dat1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-39e20ff37530c8126"
+    "mgn.amazonaws.com-source-server"              = "s-369955e3abd2ae164"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Poonam-Singh"
+    "pbs:billing:product"                          = "GitHub-Runner"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-369955e3abd2ae164"
+    "Name"                                         = "s-ghsd01-dat1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-39e20ff37530c8126"
+    "mgn.amazonaws.com-source-server"              = "s-369955e3abd2ae164"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Poonam-Singh"
+    "pbs:billing:product"                          = "GitHub-Runner"
+  }
 }
 
 import {
@@ -28,7 +50,29 @@ import {
 
 resource "aws_instance" "s_sits01_dat1_x" {
   ami           = "ami-0cd015083896391d5"
-  instance_type = "m5.xlarge"
+  instance_type = "m5.large"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3592534d8585fb9de"
+    "Name"                                         = "s-sits01-dat1-x"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-32b1cec7dbbb82f22"
+    "mgn.amazonaws.com-source-server"              = "s-3592534d8585fb9de"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3592534d8585fb9de"
+    "Name"                                         = "s-sits01-dat1-x"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-32b1cec7dbbb82f22"
+    "mgn.amazonaws.com-source-server"              = "s-3592534d8585fb9de"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
 }
 
 import {
@@ -39,6 +83,27 @@ import {
 resource "aws_instance" "i_ng_ws_sm_t1_w" {
   ami           = "ami-0d16ebbf0d8306d63"
   instance_type = "r5.large"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3b7f5c65de6e54418"
+    "Name"                                         = "i-ng-ws-sm-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-35a9754289adeaee3"
+    "mgn.amazonaws.com-source-server"              = "s-3b7f5c65de6e54418"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Sakthi-Madhappan"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = { "AWSApplicationMigrationServiceManaged" = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3b7f5c65de6e54418"
+    "Name"                                         = "i-ng-ws-sm-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-35a9754289adeaee3"
+    "mgn.amazonaws.com-source-server"              = "s-3b7f5c65de6e54418"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Sakthi-Madhappan"
+    "pbs:billing:product"                          = "Workstation"
+  }
 }
 
 import {
@@ -49,6 +114,28 @@ import {
 resource "aws_instance" "i_ng_ws_bb_t1_w" {
   ami           = "ami-0d16ebbf0d8306d63"
   instance_type = "r5.xlarge"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3714e9ba8a9a3d67e"
+    "Name"                                         = "i-ng-ws-bb-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-399e6b2275742138c"
+    "mgn.amazonaws.com-source-server"              = "s-3714e9ba8a9a3d67e"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3714e9ba8a9a3d67e"
+    "Name"                                         = "i-ng-ws-bb-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-399e6b2275742138c"
+    "mgn.amazonaws.com-source-server"              = "s-3714e9ba8a9a3d67e"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
 }
 
 import {
@@ -59,6 +146,28 @@ import {
 resource "aws_instance" "i_ng_ws_zc_t1_l" {
   ami           = "ami-0b84981f84c45e189"
   instance_type = "m5.xlarge"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-378ee4e9007b8f159"
+    "Name"                                         = "i-ng-ws-zc-t1-l"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-3fc50c58093c83b9e"
+    "mgn.amazonaws.com-source-server"              = "s-378ee4e9007b8f159"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Zheng-Dhong"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-378ee4e9007b8f159"
+    "Name"                                         = "i-ng-ws-zc-t1-l"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-3fc50c58093c83b9e"
+    "mgn.amazonaws.com-source-server"              = "s-378ee4e9007b8f159"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Zheng-Dhong"
+    "pbs:billing:product"                          = "Workstation"
+  }
 }
 
 import {
