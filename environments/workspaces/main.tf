@@ -79,3 +79,98 @@ import {
   to = aws_instance.s_ghsd01_dat1_w
   id = "i-062c6c56e0ea43a52"
 }
+
+resource "aws_instance" "s_sits01_dat1_x" {
+  ami           = "ami-0cd015083896391d5"
+  instance_type = "m5.large"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3592534d8585fb9de"
+    "Name"                                         = "s-sits01-dat1-x"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-32b1cec7dbbb82f22"
+    "mgn.amazonaws.com-source-server"              = "s-3592534d8585fb9de"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3592534d8585fb9de"
+    "Name"                                         = "s-sits01-dat1-x"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-32b1cec7dbbb82f22"
+    "mgn.amazonaws.com-source-server"              = "s-3592534d8585fb9de"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+}
+
+import {
+  to = aws_instance.s_sits01_dat1_x
+  id = "i-0f15f3836d730abb6"
+}
+
+resource "aws_instance" "i_ng_ws_sm_t1_w" {
+  ami           = "ami-0d16ebbf0d8306d63"
+  instance_type = "r5.large"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3b7f5c65de6e54418"
+    "Name"                                         = "i-ng-ws-sm-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-35a9754289adeaee3"
+    "mgn.amazonaws.com-source-server"              = "s-3b7f5c65de6e54418"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Sakthi-Madhappan"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = { "AWSApplicationMigrationServiceManaged" = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3b7f5c65de6e54418"
+    "Name"                                         = "i-ng-ws-sm-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-35a9754289adeaee3"
+    "mgn.amazonaws.com-source-server"              = "s-3b7f5c65de6e54418"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Sakthi-Madhappan"
+    "pbs:billing:product"                          = "Workstation"
+  }
+}
+
+import {
+  to = aws_instance.i_ng_ws_sm_t1_w
+  id = "i-03cd76dd517b2efb6"
+}
+
+resource "aws_instance" "i_ng_ws_bb_t1_w" {
+  ami           = "ami-0d16ebbf0d8306d63"
+  instance_type = "r5.xlarge"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3714e9ba8a9a3d67e"
+    "Name"                                         = "i-ng-ws-bb-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-399e6b2275742138c"
+    "mgn.amazonaws.com-source-server"              = "s-3714e9ba8a9a3d67e"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3714e9ba8a9a3d67e"
+    "Name"                                         = "i-ng-ws-bb-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-399e6b2275742138c"
+    "mgn.amazonaws.com-source-server"              = "s-3714e9ba8a9a3d67e"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+}
+
+import {
+  to = aws_instance.i_ng_ws_bb_t1_w
+  id = "i-037e76172f90efc2d"
+}
