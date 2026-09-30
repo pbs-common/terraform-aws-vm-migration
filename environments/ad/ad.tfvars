@@ -18,8 +18,10 @@ tags = {
   "repo"                    = "https://github.com/pbs-common/terraform-aws-vm-migration.git"
 }
 
-# 20 AD port entries per CIDR, 60 inbound rules per SG => 3 CIDRs max per SG.
-# The primary SG also carries the VPC CIDR, so it holds 2 consuming CIDRs.
+# 19 AD port entries per CIDR (57 for the VPC CIDR + 2 consuming CIDRs below),
+# plus 2 for azure_cidr_blocks and 1 for aws_shared_cidr_blocks = 60 on
+# dc1-sg/dc2-sg. No headroom left - freeing more slots needs another port
+# merge or a higher SG rule quota.
 
 # soc (10.168.0.0/16) + cchq (10.68.50.0/24)
 consuming_vpc_cidr_blocks = ["10.168.0.0/16", "10.68.50.0/24"]

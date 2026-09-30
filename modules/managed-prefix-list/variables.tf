@@ -27,6 +27,11 @@ variable "max_entries" {
     condition     = var.max_entries >= length(var.entries)
     error_message = "max_entries must be at least the number of entries in var.entries."
   }
+
+  validation {
+    condition     = var.max_entries >= 1 && floor(var.max_entries) == var.max_entries
+    error_message = "max_entries must be a positive whole number."
+  }
 }
 
 variable "entries" {
