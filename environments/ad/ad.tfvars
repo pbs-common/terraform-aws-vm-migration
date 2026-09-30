@@ -18,22 +18,27 @@ tags = {
   "repo"                    = "https://github.com/pbs-common/terraform-aws-vm-migration.git"
 }
 
-# 19 AD port entries per CIDR (57 for the VPC CIDR + 2 consuming CIDRs below),
-# plus 2 for azure_cidr_blocks and 1 for aws_shared_cidr_blocks = 60 on
-# dc1-sg/dc2-sg. No headroom left - freeing more slots needs another port
-# merge or a higher SG rule quota.
-
-# soc (10.168.0.0/16) + cchq (10.68.50.0/24)
-consuming_vpc_cidr_blocks = ["10.168.0.0/16", "10.68.50.0/24"]
-
-# az - not yet routed via the TGW
-overflow_cidr_blocks = ["10.190.4.0/24", "10.191.4.0/24", "10.164.0.0/16"]
-
-overflow2_cidr_blocks = ["10.64.0.0/16"]
-
-# ADWS (TCP/9389) access, PBSMAP-309
-azure_cidr_blocks      = ["10.190.0.0/16", "10.191.0.0/16"]
-aws_shared_cidr_blocks = ["10.202.0.0/16"]
+# One SG per prefix list. 20 AD ports x CIDRs must stay under the 100-rule
+# quota: on_prem 2x20=40, aws_shared 1x20=20, azure 4x20=80.
+ad_security_groups = {
+  on_prem = {
+    groups = {
+      # soc + cchq
+      on_prem = ["10.168.0.0/16", "10.68.50.0/24"]
+    }
+  }
+  aws_shared = {
+    groups = {
+      aws_shared = ["10.202.0.0/16"]
+    }
+  }
+  azure = {
+    groups = {
+      # 10.164.0.0/16 and 10.64.0.0/16 are the old overflow/overflow2 CIDRs, azure too.
+      azure = ["10.190.0.0/16", "10.191.0.0/16", "10.164.0.0/16", "10.64.0.0/16"]
+    }
+  }
+}
 
 key_name = null
 
