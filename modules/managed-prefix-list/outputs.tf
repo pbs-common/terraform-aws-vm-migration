@@ -1,11 +1,13 @@
 output "id" {
   description = "ID of the managed prefix list."
   value       = aws_ec2_managed_prefix_list.this.id
+  depends_on  = [aws_ec2_managed_prefix_list_entry.this]
 }
 
 output "arn" {
   description = "ARN of the managed prefix list."
   value       = aws_ec2_managed_prefix_list.this.arn
+  depends_on  = [aws_ec2_managed_prefix_list_entry.this]
 }
 
 output "max_entries" {

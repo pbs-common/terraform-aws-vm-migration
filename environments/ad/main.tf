@@ -116,7 +116,8 @@ resource "aws_vpc_security_group_ingress_rule" "ad_access" {
 }
 
 locals {
-  ad_access_sg_ids = [for sg in aws_security_group.ad_access : sg.id]
+  # Sourced from the rules, not the SGs directly, so attachment waits for rules to exist.
+  ad_access_sg_ids = distinct([for rule in aws_vpc_security_group_ingress_rule.ad_access : rule.security_group_id])
 }
 
 resource "aws_cloudwatch_log_group" "ssm_sessions" {
