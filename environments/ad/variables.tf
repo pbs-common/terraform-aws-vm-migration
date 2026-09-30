@@ -46,22 +46,21 @@ variable "root_volume_size" {
   default     = 100
 }
 
-variable "consuming_vpc_cidr_blocks" {
-  description = "CIDR blocks of the workload VPCs that need directory/DNS access to the DCs (AD ports below). Populate as consuming VPCs are onboarded."
-  type        = list(string)
-  default     = []
-}
+variable "ad_security_groups" {
+  description = "Security groups for AD port access. Each top-level key becomes its own SG; each named group within it gets a dedicated managed prefix list, and every group gets identical access to all AD ports (including ADWS) on that SG. Group a set of CIDRs together when their combined size x port count fits under the per-SG rule quota; split into another top-level key otherwise."
+  type = map(object({
+    groups = map(list(string))
+  }))
+  default = {}
 
-variable "overflow_cidr_blocks" {
-  description = "Extra CIDR blocks for a second SG, once the primary SG hits AWS's 60-rule limit."
-  type        = list(string)
-  default     = []
-}
-
-variable "overflow2_cidr_blocks" {
-  description = "Extra CIDR blocks for a third SG, once the primary and second SGs both hit AWS's 60-rule limit."
-  type        = list(string)
-  default     = []
+  validation {
+    # A group name reused across two SGs silently overwrites the first one's CIDRs.
+    condition = (
+      length(flatten([for sg in var.ad_security_groups : keys(sg.groups)]))
+      == length(distinct(flatten([for sg in var.ad_security_groups : keys(sg.groups)])))
+    )
+    error_message = "Group names must be unique across every ad_security_groups entry, not just within one SG."
+  }
 }
 
 variable "key_name" {

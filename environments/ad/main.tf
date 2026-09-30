@@ -1,4 +1,4 @@
-# Required AD DS ports (Microsoft-documented).
+# Required AD DS ports (Microsoft-documented), plus ADWS for directory sync consumers.
 locals {
   ad_ports = [
     { description = "DNS (TCP)", from_port = 53, to_port = 53, protocol = "tcp" },
@@ -16,51 +16,48 @@ locals {
     { description = "Kerberos password change (TCP)", from_port = 464, to_port = 464, protocol = "tcp" },
     { description = "Kerberos password change (UDP)", from_port = 464, to_port = 464, protocol = "udp" },
     { description = "LDAPS (TCP)", from_port = 636, to_port = 636, protocol = "tcp" },
-    { description = "LDAP GC (TCP)", from_port = 3268, to_port = 3268, protocol = "tcp" },
-    { description = "LDAPS GC (TCP)", from_port = 3269, to_port = 3269, protocol = "tcp" },
+    { description = "Global Catalog LDAP/LDAPS (TCP)", from_port = 3268, to_port = 3269, protocol = "tcp" },
+    { description = "AD Web Services / ADWS (TCP)", from_port = 9389, to_port = 9389, protocol = "tcp" },
     { description = "RPC dynamic port range (TCP)", from_port = 49152, to_port = 65535, protocol = "tcp" },
     { description = "RDP", from_port = 3389, to_port = 3389, protocol = "tcp" },
     { description = "ICMP", from_port = -1, to_port = -1, protocol = "icmp" }
   ]
 
-  # VPC CIDR covers DC1<->DC2 replication; consuming VPCs get the same ports.
-  allowed_cidr_blocks = distinct(concat(
-    [data.aws_vpc.this.cidr_block],
-    var.consuming_vpc_cidr_blocks,
-  ))
-
-  ad_ingress_rules = [
-    for pair in setproduct(local.ad_ports, local.allowed_cidr_blocks) : {
-      description = "${pair[0].description} from ${pair[1]}"
-      from_port   = pair[0].from_port
-      to_port     = pair[0].to_port
-      protocol    = pair[0].protocol
-      cidr_blocks = [pair[1]]
+  # DC1<->DC2 replication, raw CIDR rather than a named group since it's not reused.
+  vpc_self_ingress_rules = [
+    for port in local.ad_ports : {
+      description     = "${port.description} from ${data.aws_vpc.this.cidr_block}"
+      from_port       = port.from_port
+      to_port         = port.to_port
+      protocol        = port.protocol
+      cidr_blocks     = [data.aws_vpc.this.cidr_block]
+      prefix_list_ids = []
     }
   ]
 
-  # Overflow SG rules, once the primary SG hits AWS's 60-rule limit.
-  overflow_ingress_rules_flat = { for r in flatten([
-    for pair in setproduct(local.ad_ports, var.overflow_cidr_blocks) : [{
-      key         = "${pair[0].protocol}-${pair[0].from_port}-${pair[0].to_port}-${pair[1]}"
-      description = "${pair[0].description} from ${pair[1]}"
-      from_port   = pair[0].from_port
-      to_port     = pair[0].to_port
-      protocol    = pair[0].protocol
-      cidr_block  = pair[1]
-    }]
-  ]) : r.key => r }
+  # Flatten var.ad_security_groups' nested groups into name -> {sg_key, cidrs}.
+  ad_cidr_groups = merge([
+    for sg_key, sg in var.ad_security_groups : {
+      for group_name, cidrs in sg.groups : group_name => {
+        sg_key = sg_key
+        cidrs  = cidrs
+      }
+    }
+  ]...)
 
-  # Third SG rules, once the overflow SG also hits AWS's 60-rule limit.
-  overflow2_ingress_rules_flat = { for r in flatten([
-    for pair in setproduct(local.ad_ports, var.overflow2_cidr_blocks) : [{
-      key         = "${pair[0].protocol}-${pair[0].from_port}-${pair[0].to_port}-${pair[1]}"
-      description = "${pair[0].description} from ${pair[1]}"
-      from_port   = pair[0].from_port
-      to_port     = pair[0].to_port
-      protocol    = pair[0].protocol
-      cidr_block  = pair[1]
-    }]
+  # One entry per (group, port) pair - every group gets the same full port set.
+  ad_access_ingress_flat = { for r in flatten([
+    for group_name, group in local.ad_cidr_groups : [
+      for port in local.ad_ports : {
+        key            = "${group.sg_key}-${group_name}-${port.protocol}-${port.from_port}-${port.to_port}"
+        sg_key         = group.sg_key
+        description    = "${port.description} from ${group_name}"
+        from_port      = port.from_port
+        to_port        = port.to_port
+        protocol       = port.protocol
+        prefix_list_id = module.ad_cidr_prefix_lists[group_name].id
+      }
+    ]
   ]) : r.key => r }
 }
 
@@ -80,65 +77,47 @@ data "aws_vpc" "this" {
   id = data.aws_subnet.sample.vpc_id
 }
 
-resource "aws_security_group" "ad_ports_overflow" {
-  count = length(var.overflow_cidr_blocks) > 0 ? 1 : 0
+module "ad_cidr_prefix_lists" {
+  source   = "../../modules/managed-prefix-list"
+  for_each = local.ad_cidr_groups
 
-  name        = "ad-ports-overflow-sg"
-  description = "Overflow AD port rules"
+  name        = "ad-access-${each.key}"
+  max_entries = length(each.value.cidrs)
+  entries     = [for c in each.value.cidrs : { cidr = c }]
+
+  tags = var.tags
+}
+
+resource "aws_security_group" "ad_access" {
+  for_each = var.ad_security_groups
+
+  name_prefix = "ad-access-${each.key}-"
+  description = "AD port access for the ${each.key} CIDR groups"
   vpc_id      = data.aws_vpc.this.id
 
-  tags = merge(var.tags, { Name = "ad-ports-overflow-sg" })
+  tags = merge(var.tags, { Name = "ad-access-${each.key}-sg" })
 
   lifecycle {
     create_before_destroy = true
   }
 }
 
-resource "aws_vpc_security_group_ingress_rule" "overflow" {
-  for_each = local.overflow_ingress_rules_flat
+resource "aws_vpc_security_group_ingress_rule" "ad_access" {
+  for_each = local.ad_access_ingress_flat
 
-  security_group_id = aws_security_group.ad_ports_overflow[0].id
+  security_group_id = aws_security_group.ad_access[each.value.sg_key].id
   description       = each.value.description
   from_port         = each.value.from_port
   to_port           = each.value.to_port
   ip_protocol       = each.value.protocol
-  cidr_ipv4         = each.value.cidr_block
+  prefix_list_id    = each.value.prefix_list_id
 
-  tags = merge(var.tags, { Name = "ad-ports-overflow-sg-ingress-${replace(each.key, "/", "_")}" })
-}
-
-resource "aws_security_group" "ad_ports_overflow2" {
-  count = length(var.overflow2_cidr_blocks) > 0 ? 1 : 0
-
-  name        = "ad-ports-overflow2-sg"
-  description = "Third AD port rules"
-  vpc_id      = data.aws_vpc.this.id
-
-  tags = merge(var.tags, { Name = "ad-ports-overflow2-sg" })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_vpc_security_group_ingress_rule" "overflow2" {
-  for_each = local.overflow2_ingress_rules_flat
-
-  security_group_id = aws_security_group.ad_ports_overflow2[0].id
-  description       = each.value.description
-  from_port         = each.value.from_port
-  to_port           = each.value.to_port
-  ip_protocol       = each.value.protocol
-  cidr_ipv4         = each.value.cidr_block
-
-  tags = merge(var.tags, { Name = "ad-ports-overflow2-sg-ingress-${replace(each.key, "/", "_")}" })
+  tags = merge(var.tags, { Name = "ad-access-${each.key}" })
 }
 
 locals {
-  overflow_sg_ids = concat(
-    length(var.overflow_cidr_blocks) > 0 ? [aws_security_group.ad_ports_overflow[0].id] : [],
-    length(var.overflow2_cidr_blocks) > 0 ? [aws_security_group.ad_ports_overflow2[0].id] : [],
-  )
+  # Sourced from the rules, not the SGs directly, so attachment waits for rules to exist.
+  ad_access_sg_ids = distinct([for rule in aws_vpc_security_group_ingress_rule.ad_access : rule.security_group_id])
 }
 
 resource "aws_cloudwatch_log_group" "ssm_sessions" {
@@ -167,9 +146,10 @@ resource "aws_ssm_document" "session_manager_prefs" {
 }
 
 module "dc1" {
-  source = "../../modules/ec2-windows-workload"
+  source = "../../modules/ec2-workload"
 
   name                       = "dc1"
+  os_family                  = "windows"
   ami_id                     = var.golden_ami_id
   private_subnet_name_prefix = var.private_subnet_name_prefix
   availability_zone          = var.dc1_availability_zone
@@ -179,8 +159,8 @@ module "dc1" {
   root_volume_size      = var.root_volume_size
   session_log_group_arn = aws_cloudwatch_log_group.ssm_sessions.arn
 
-  ingress_rules      = local.ad_ingress_rules
-  security_group_ids = local.overflow_sg_ids
+  ingress_rules      = local.vpc_self_ingress_rules
+  security_group_ids = local.ad_access_sg_ids
 
   patch_group = "ad"
 
@@ -199,9 +179,10 @@ module "ssm_session_access" {
 }
 
 module "dc2" {
-  source = "../../modules/ec2-windows-workload"
+  source = "../../modules/ec2-workload"
 
   name                       = "dc2"
+  os_family                  = "windows"
   ami_id                     = var.golden_ami_id
   private_subnet_name_prefix = var.private_subnet_name_prefix
   availability_zone          = var.dc2_availability_zone
@@ -211,8 +192,8 @@ module "dc2" {
   root_volume_size      = var.root_volume_size
   session_log_group_arn = aws_cloudwatch_log_group.ssm_sessions.arn
 
-  ingress_rules      = local.ad_ingress_rules
-  security_group_ids = local.overflow_sg_ids
+  ingress_rules      = local.vpc_self_ingress_rules
+  security_group_ids = local.ad_access_sg_ids
 
   patch_group = "ad"
 

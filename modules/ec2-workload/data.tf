@@ -1,8 +1,15 @@
-# Latest Windows Server 2022 AMI, used when var.ami_id is not set.
+# Latest Windows Server 2022 AMI, used when os_family = "windows" and var.ami_id is not set.
 data "aws_ssm_parameter" "windows_2022" {
-  count = var.ami_id == null ? 1 : 0
+  count = var.os_family == "windows" && var.ami_id == null ? 1 : 0
 
   name = "/aws/service/ami-windows-latest/Windows_Server-2022-English-Full-Base"
+}
+
+# Latest Amazon Linux 2023 AMI, used when os_family = "linux" and var.ami_id is not set.
+data "aws_ssm_parameter" "amazon_linux_2023" {
+  count = var.os_family == "linux" && var.ami_id == null ? 1 : 0
+
+  name = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 }
 
 # Candidate subnets, matched by Name-tag prefix and AZ.

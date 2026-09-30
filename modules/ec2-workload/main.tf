@@ -1,5 +1,9 @@
 locals {
-  ami_id = coalesce(var.ami_id, try(data.aws_ssm_parameter.windows_2022[0].value, null))
+  ami_id = coalesce(
+    var.ami_id,
+    try(data.aws_ssm_parameter.windows_2022[0].value, null),
+    try(data.aws_ssm_parameter.amazon_linux_2023[0].value, null),
+  )
 
   tags = merge(
     var.tags,
@@ -21,18 +25,38 @@ locals {
   subnet_id = element(local.private_subnet_ids, 0)
   vpc_id    = data.aws_subnet.candidates[local.subnet_id].vpc_id
 
-  # One entry per (rule, CIDR) pair. Keyed by content, not list position, so
-  # adding/removing a rule or CIDR doesn't reshuffle unrelated existing keys.
+  # CIDR entries key on the CIDR itself, matching ec2-windows-workload's key
+  # shape so a migrated workload doesn't recreate its rules. Prefix list
+  # entries key on rule_idx/pl_idx instead of the prefix list ID, since that
+  # ID is often unknown until apply.
   ingress_rules_flat = { for r in flatten([
-    for rule in var.ingress_rules : [
-      for cidr in rule.cidr_blocks : merge(rule, { key = "${rule.protocol}-${rule.from_port}-${rule.to_port}-${cidr}", cidr_block = cidr })
-    ]
+    for rule_idx, rule in var.ingress_rules : concat(
+      [for cidr in rule.cidr_blocks : merge(rule, {
+        key            = "${rule.protocol}-${rule.from_port}-${rule.to_port}-${cidr}"
+        cidr_block     = cidr
+        prefix_list_id = null
+      })],
+      [for pl_idx, pl in rule.prefix_list_ids : merge(rule, {
+        key            = "${rule.protocol}-${rule.from_port}-${rule.to_port}-pl-${rule_idx}-${pl_idx}"
+        cidr_block     = null
+        prefix_list_id = pl
+      })],
+    )
   ]) : r.key => r }
 
   egress_rules_flat = { for r in flatten([
-    for rule in var.egress_rules : [
-      for cidr in rule.cidr_blocks : merge(rule, { key = "${rule.protocol}-${rule.from_port}-${rule.to_port}-${cidr}", cidr_block = cidr })
-    ]
+    for rule_idx, rule in var.egress_rules : concat(
+      [for cidr in rule.cidr_blocks : merge(rule, {
+        key            = "${rule.protocol}-${rule.from_port}-${rule.to_port}-${cidr}"
+        cidr_block     = cidr
+        prefix_list_id = null
+      })],
+      [for pl_idx, pl in rule.prefix_list_ids : merge(rule, {
+        key            = "${rule.protocol}-${rule.from_port}-${rule.to_port}-pl-${rule_idx}-${pl_idx}"
+        cidr_block     = null
+        prefix_list_id = pl
+      })],
+    )
   ]) : r.key => r }
 }
 
@@ -61,6 +85,7 @@ resource "aws_vpc_security_group_ingress_rule" "this" {
   to_port           = each.value.to_port
   ip_protocol       = each.value.protocol
   cidr_ipv4         = each.value.cidr_block
+  prefix_list_id    = each.value.prefix_list_id
 
   tags = merge(local.tags, { Name = "${var.name}-sg-ingress-${replace(each.key, "/", "_")}" })
 }
@@ -74,6 +99,7 @@ resource "aws_vpc_security_group_egress_rule" "this" {
   to_port           = each.value.to_port
   ip_protocol       = each.value.protocol
   cidr_ipv4         = each.value.cidr_block
+  prefix_list_id    = each.value.prefix_list_id
 
   tags = merge(local.tags, { Name = "${var.name}-sg-egress-${replace(each.key, "/", "_")}" })
 }
@@ -169,7 +195,8 @@ resource "aws_instance" "this" {
   disable_api_termination     = var.enable_termination_protection
   monitoring                  = var.monitoring
   user_data                   = var.user_data
-  get_password_data           = var.key_name != null
+  # RDP password retrieval only applies to Windows instances.
+  get_password_data = var.os_family == "windows" && var.key_name != null
 
   root_block_device {
     volume_size = var.root_volume_size

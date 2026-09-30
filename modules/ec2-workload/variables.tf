@@ -8,8 +8,18 @@ variable "name" {
   }
 }
 
+variable "os_family" {
+  description = "Operating system family (\"windows\" or \"linux\"). Drives AMI auto-resolution and Windows-only RDP password retrieval."
+  type        = string
+
+  validation {
+    condition     = contains(["windows", "linux"], var.os_family)
+    error_message = "os_family must be \"windows\" or \"linux\"."
+  }
+}
+
 variable "ami_id" {
-  description = "AMI ID to launch. If null, the latest Windows Server 2022 Full Base AMI is resolved via the public SSM parameter."
+  description = "AMI ID to launch. If null, the latest AMI for os_family is resolved via the public SSM parameter (Windows Server 2022 Full Base, or Amazon Linux 2023)."
   type        = string
   default     = null
 }
@@ -37,7 +47,7 @@ variable "associate_public_ip_address" {
 }
 
 variable "key_name" {
-  description = "EC2 key pair name for RDP password decryption. Optional fallback - SSM Session Manager is the default access method."
+  description = "EC2 key pair name. For Windows, used as an RDP password-decryption fallback alongside SSM Session Manager. For Linux, used for SSH key-pair access."
   type        = string
   default     = null
 }
@@ -57,25 +67,32 @@ variable "security_group_ids" {
 }
 
 variable "ingress_rules" {
-  description = "Ingress rules for the security group created by this module. Ignored if create_security_group is false."
+  description = "Ingress rules for the security group created by this module. Each rule sets cidr_blocks and/or prefix_list_ids. A prefix-list rule counts against the account's configured per-security-group rule quota (AWS default 60, adjustable) as that list's max_entries, not as 1."
   type = list(object({
-    description = string
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    cidr_blocks = list(string)
+    description     = string
+    from_port       = number
+    to_port         = number
+    protocol        = string
+    cidr_blocks     = optional(list(string), [])
+    prefix_list_ids = optional(list(string), [])
   }))
   default = []
+
+  validation {
+    condition     = alltrue([for r in var.ingress_rules : length(r.cidr_blocks) > 0 || length(r.prefix_list_ids) > 0])
+    error_message = "Each ingress rule must set at least one of cidr_blocks or prefix_list_ids."
+  }
 }
 
 variable "egress_rules" {
-  description = "Egress rules for the security group created by this module. Defaults to allow-all."
+  description = "Egress rules for the security group created by this module. Defaults to allow-all. Same cidr_blocks/prefix_list_ids shape as ingress_rules."
   type = list(object({
-    description = string
-    from_port   = number
-    to_port     = number
-    protocol    = string
-    cidr_blocks = list(string)
+    description     = string
+    from_port       = number
+    to_port         = number
+    protocol        = string
+    cidr_blocks     = optional(list(string), [])
+    prefix_list_ids = optional(list(string), [])
   }))
   default = [
     {
@@ -86,6 +103,11 @@ variable "egress_rules" {
       cidr_blocks = ["0.0.0.0/0"]
     }
   ]
+
+  validation {
+    condition     = alltrue([for r in var.egress_rules : length(r.cidr_blocks) > 0 || length(r.prefix_list_ids) > 0])
+    error_message = "Each egress rule must set at least one of cidr_blocks or prefix_list_ids."
+  }
 }
 
 # IAM / SSM
