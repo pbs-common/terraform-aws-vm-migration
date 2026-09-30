@@ -67,7 +67,7 @@ variable "security_group_ids" {
 }
 
 variable "ingress_rules" {
-  description = "Ingress rules for the security group created by this module. Each rule sets cidr_blocks and/or prefix_list_ids. A prefix-list rule counts against the 60-rule AWS quota as that list's max_entries, not as 1."
+  description = "Ingress rules for the security group created by this module. Each rule sets cidr_blocks and/or prefix_list_ids. A prefix-list rule counts against the account's configured per-security-group rule quota (AWS default 60, adjustable) as that list's max_entries, not as 1."
   type = list(object({
     description     = string
     from_port       = number

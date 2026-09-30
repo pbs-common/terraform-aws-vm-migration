@@ -91,7 +91,7 @@ module "ad_cidr_prefix_lists" {
 resource "aws_security_group" "ad_access" {
   for_each = var.ad_security_groups
 
-  name        = "ad-access-${each.key}-sg"
+  name_prefix = "ad-access-${each.key}-"
   description = "AD port access for the ${each.key} CIDR groups"
   vpc_id      = data.aws_vpc.this.id
 

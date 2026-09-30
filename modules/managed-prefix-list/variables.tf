@@ -20,7 +20,7 @@ variable "address_family" {
 }
 
 variable "max_entries" {
-  description = "Maximum number of entries the prefix list can hold. No default: a referencing SG rule counts against the 60-rule quota by this number, not 1, so size it deliberately."
+  description = "Maximum number of entries the prefix list can hold. No default: a referencing SG rule counts against the account's configured per-security-group rule quota (AWS default 60, adjustable) by this number, not 1, so size it deliberately."
   type        = number
 
   validation {
