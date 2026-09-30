@@ -47,3 +47,35 @@ import {
   to = aws_instance.i_ng_ws_zc_t1_l
   id = "i-03d447ddfcf97efe7"
 }
+
+resource "aws_instance" "s_ghsd01_dat1_w" {
+  ami           = "ami-0d16ebbf0d8306d63"
+  instance_type = "m5.xlarge"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-369955e3abd2ae164"
+    "Name"                                         = "s-ghsd01-dat1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-39e20ff37530c8126"
+    "mgn.amazonaws.com-source-server"              = "s-369955e3abd2ae164"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Poonam-Singh"
+    "pbs:billing:product"                          = "GitHub-Runner"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-369955e3abd2ae164"
+    "Name"                                         = "s-ghsd01-dat1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-39e20ff37530c8126"
+    "mgn.amazonaws.com-source-server"              = "s-369955e3abd2ae164"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Poonam-Singh"
+    "pbs:billing:product"                          = "GitHub-Runner"
+  }
+}
+
+import {
+  to = aws_instance.s_ghsd01_dat1_w
+  id = "i-062c6c56e0ea43a52"
+}
