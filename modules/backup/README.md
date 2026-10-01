@@ -13,8 +13,8 @@ This module creates and manages AWS Backup resources for automated backup and re
 
 The module deploys two backup plans:
 
-- **Daily Plan**: Runs every day at midnight UTC, retains backups for 14 days. Target resources with `daily_backups=true` tag.
-- **Weekly Plan**: Runs Saturday at midnight UTC, retains backups for 14 days. Target resources with `weekly_backups=true` tag.
+- **Daily Plan**: Runs every day at midnight UTC, retains backups for 90 days. Target resources with `daily_backups=true` tag.
+- **Weekly Plan**: Runs Saturday at midnight UTC, retains backups for 90 days. Target resources with `weekly_backups=true` tag.
 
 ## Usage
 
@@ -28,10 +28,10 @@ module "backup" {
   kms_key_arn = aws_kms_key.backup.arn
 
   daily_schedule      = "cron(0 0 * * ? *)"   # Every day at midnight UTC
-  daily_retention = 14
+  daily_retention = 90
 
   weekly_schedule      = "cron(0 0 ? * SAT *)"   # Saturday at midnight UTC
-  weekly_retention = 12
+  weekly_retention = 90
 
   windows_vss = "enabled"
 
@@ -54,9 +54,9 @@ Resources are selected automatically by checking for `daily_backups=true` (for d
 | vault_name | Name of the backup vault | `string` | N/A | yes |
 | kms_key_arn | ARN of the KMS key for customer-managed encryption (AWS-managed encryption used if null) | `string` | `null` | no |
 | daily_schedule | Backup schedule for daily backups in cron format | `string` | `"cron(0 0 * * ? *)"` | no |
-| daily_retention | Days to retain daily backups | `number` | `14` | no |
+| daily_retention | Days to retain daily backups | `number` | `90` | no |
 | weekly_schedule | Backup schedule for weekly backups in cron format | `string` | `"cron(0 0 ? * SAT *)"` | no |
-| weekly_retention | Days to retain weekly backups | `number` | `14` | no |
+| weekly_retention | Days to retain weekly backups | `number` | `90` | no |
 | tags | Tags to apply to resources | `map(string)` | `{}` | no |
 | windows_vss | Whether windows_vss is enabled for EC2 instance backups | `string 'enabled' or 'disabled'` | `disabled` | no |
 

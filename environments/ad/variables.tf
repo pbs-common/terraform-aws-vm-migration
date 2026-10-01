@@ -90,7 +90,7 @@ variable "daily_schedule" {
 variable "daily_retention" {
   description = "Number of days to retain daily backups."
   type        = number
-  default     = 14
+  default     = 90
 }
 
 variable "weekly_schedule" {
@@ -102,7 +102,7 @@ variable "weekly_schedule" {
 variable "weekly_retention" {
   description = "Number of days to retain weekly backups."
   type        = number
-  default     = 14
+  default     = 90
 }
 
 variable "windows_vss" {
