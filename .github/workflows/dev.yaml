@@ -57,7 +57,7 @@ jobs:
   # Step 1: Validate Terraform format
   validate-dev:
     name: Validate Format
-    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-validate.yaml@main
+    uses: ./.github/workflows/terraform-validate.yaml
     with:
       terraform_version: "1.16.0"
       working_directory: environments/dev
@@ -68,7 +68,7 @@ jobs:
   plan-dev:
     name: Plan Dev Environment
     needs: validate-dev
-    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-plan.yaml@main
+    uses: ./.github/workflows/terraform-plan.yaml
     with:
       terraform_version: "1.16.0"
       tflint_version: "0.64.0"
@@ -91,7 +91,7 @@ jobs:
   apply-dev:
     name: Apply Dev Environment
     needs: plan-dev
-    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-apply.yaml@main
+    uses: ./.github/workflows/terraform-apply.yaml
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')

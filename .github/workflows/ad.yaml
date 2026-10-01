@@ -64,7 +64,7 @@ jobs:
   # Step 1: Validate Terraform format
   validate-ad:
     name: Validate Format
-    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-validate.yaml@main
+    uses: ./.github/workflows/terraform-validate.yaml
     with:
       terraform_version: "1.16.0"
       working_directory: environments/ad
@@ -75,7 +75,7 @@ jobs:
   plan-ad:
     name: Plan AD Environment
     needs: validate-ad
-    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-plan.yaml@main
+    uses: ./.github/workflows/terraform-plan.yaml
     with:
       terraform_version: "1.16.0"
       tflint_version: "0.64.0"
@@ -98,7 +98,7 @@ jobs:
   apply-ad:
     name: Apply AD Environment
     needs: plan-ad
-    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-apply.yaml@main
+    uses: ./.github/workflows/terraform-apply.yaml
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
