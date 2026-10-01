@@ -13,8 +13,8 @@ This module creates and manages AWS Backup resources for automated backup and re
 
 The module deploys two backup plans:
 
-- **Daily Plan**: Runs every day at midnight UTC, retains backups for 14 days. Target resources with `daily_backups=true` tag.
-- **Weekly Plan**: Runs Saturday at midnight UTC, retains backups for 14 days. Target resources with `weekly_backups=true` tag.
+- **Daily Plan**: Runs every day at midnight UTC, retains backups for 90 days. Target resources with `daily_backups=true` tag.
+- **Weekly Plan**: Runs Saturday at midnight UTC, retains backups for 90 days. Target resources with `weekly_backups=true` tag.
 
 ## Usage
 
@@ -28,10 +28,10 @@ module "backup" {
   kms_key_arn = aws_kms_key.backup.arn
 
   daily_schedule      = "cron(0 0 * * ? *)"   # Every day at midnight UTC
-  daily_retention = 14
+  daily_retention = 90
 
   weekly_schedule      = "cron(0 0 ? * SAT *)"   # Saturday at midnight UTC
-  weekly_retention = 12
+  weekly_retention = 90
 
   windows_vss = "enabled"
 
