@@ -27,8 +27,6 @@ resource "aws_instance" "s_emts01_dat1_w" {
     "pbs:billing:environment"                      = "Dev"
     "pbs:billing:owner"                            = "Poonam-Singh"
     "pbs:billing:product"                          = "Ready-API"
-    "aws:ec2launchtemplate:version"                = "5"
-    "aws:ec2launchtemplate:id"                     = "lt-0c5d5bc1e0f8ed7e3"
   }
   tags_all = {
     "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
@@ -39,8 +37,6 @@ resource "aws_instance" "s_emts01_dat1_w" {
     "pbs:billing:environment"                      = "Dev"
     "pbs:billing:owner"                            = "Poonam-Singh"
     "pbs:billing:product"                          = "Ready-API"
-    "aws:ec2launchtemplate:version"                = "5"
-    "aws:ec2launchtemplate:id"                     = "lt-0c5d5bc1e0f8ed7e3"
   }
 }
 
@@ -61,8 +57,6 @@ resource "aws_instance" "s_emts03_dat1_w" {
     "pbs:billing:environment"                      = "Dev"
     "pbs:billing:owner"                            = "Poonam-Singh"
     "pbs:billing:product"                          = "Ready-API"
-    "aws:ec2launchtemplate:version"                = "5"
-    "aws:ec2launchtemplate:id"                     = "lt-0c5d5bc1e0f8ed7e3"
   }
   tags_all = {
     "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
@@ -73,8 +67,6 @@ resource "aws_instance" "s_emts03_dat1_w" {
     "pbs:billing:environment"                      = "Dev"
     "pbs:billing:owner"                            = "Poonam-Singh"
     "pbs:billing:product"                          = "Ready-API"
-    "aws:ec2launchtemplate:version"                = "5"
-    "aws:ec2launchtemplate:id"                     = "lt-0c5d5bc1e0f8ed7e3"
   }
 }
 

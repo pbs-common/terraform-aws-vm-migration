@@ -188,8 +188,6 @@ resource "aws_instance" "i_ng_ws_kt_t1_w" {
     "pbs:billing:environment"                      = "workspaces"
     "pbs:billing:owner"                            = "Murali-Rajendran"
     "pbs:billing:product"                          = "Workstation"
-    "aws:ec2launchtemplate:version"                = "12"
-    "aws:ec2launchtemplate:id"                     = "lt-0e7a18eb05c83763b"
   }
   tags_all = {
     "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
@@ -201,8 +199,6 @@ resource "aws_instance" "i_ng_ws_kt_t1_w" {
     "pbs:billing:environment"                      = "workspaces"
     "pbs:billing:owner"                            = "Murali-Rajendran"
     "pbs:billing:product"                          = "Workstation"
-    "aws:ec2launchtemplate:version"                = "12"
-    "aws:ec2launchtemplate:id"                     = "lt-0e7a18eb05c83763b"
   }
 }
 
