@@ -174,3 +174,39 @@ import {
   to = aws_instance.i_ng_ws_bb_t1_w
   id = "i-037e76172f90efc2d"
 }
+
+resource "aws_instance" "i_ng_ws_kt_t1_w" {
+  ami           = "ami-0d16ebbf0d8306d63"
+  instance_type = "r7i.large"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-320dc6efe7f3429e6"
+    "Name"                                         = "i-ng-ws-kt-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-315d9cc3cfcdd8018"
+    "mgn.amazonaws.com-source-server"              = "s-320dc6efe7f3429e6"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+    "aws:ec2launchtemplate:version"                = "12"
+    "aws:ec2launchtemplate:id"                     = "lt-0e7a18eb05c83763b"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-320dc6efe7f3429e6"
+    "Name"                                         = "i-ng-ws-kt-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-315d9cc3cfcdd8018"
+    "mgn.amazonaws.com-source-server"              = "s-320dc6efe7f3429e6"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+    "aws:ec2launchtemplate:version"                = "12"
+    "aws:ec2launchtemplate:id"                     = "lt-0e7a18eb05c83763b"
+  }
+}
+
+import {
+  to = aws_instance.i_ng_ws_kt_t1_w
+  id = "i-05358ac8ae6ae3398"
+}
