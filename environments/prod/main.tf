@@ -28,8 +28,6 @@ resource "aws_instance" "i_amsi01_pat1_w" {
     "pbs:billing:environment"                      = "Prod"
     "pbs:billing:owner"                            = "Sherri-Ann"
     "pbs:billing:product"                          = "AlertMedia"
-    "aws:ec2launchtemplate:version"                = "5"
-    "aws:ec2launchtemplate:id"                     = "lt-03d12bcfff5dc06b7"
   }
   tags_all = {
     "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
@@ -41,8 +39,6 @@ resource "aws_instance" "i_amsi01_pat1_w" {
     "pbs:billing:environment"                      = "Prod"
     "pbs:billing:owner"                            = "Sherri-Ann"
     "pbs:billing:product"                          = "AlertMedia"
-    "aws:ec2launchtemplate:version"                = "5"
-    "aws:ec2launchtemplate:id"                     = "lt-03d12bcfff5dc06b7"
   }
 }
 
