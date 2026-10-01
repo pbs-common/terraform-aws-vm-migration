@@ -24,7 +24,7 @@ ad_security_groups = {
   on_prem = {
     groups = {
       # soc + cchq
-      on_prem = ["10.168.0.0/16", "10.68.50.0/24"]
+      on_prem = ["10.168.0.0/16", "10.68.0.0/16"]
     }
   }
   aws_shared = {
