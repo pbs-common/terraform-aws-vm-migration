@@ -54,9 +54,9 @@ Resources are selected automatically by checking for `daily_backups=true` (for d
 | vault_name | Name of the backup vault | `string` | N/A | yes |
 | kms_key_arn | ARN of the KMS key for customer-managed encryption (AWS-managed encryption used if null) | `string` | `null` | no |
 | daily_schedule | Backup schedule for daily backups in cron format | `string` | `"cron(0 0 * * ? *)"` | no |
-| daily_retention | Days to retain daily backups | `number` | `14` | no |
+| daily_retention | Days to retain daily backups | `number` | `90` | no |
 | weekly_schedule | Backup schedule for weekly backups in cron format | `string` | `"cron(0 0 ? * SAT *)"` | no |
-| weekly_retention | Days to retain weekly backups | `number` | `14` | no |
+| weekly_retention | Days to retain weekly backups | `number` | `90` | no |
 | tags | Tags to apply to resources | `map(string)` | `{}` | no |
 | windows_vss | Whether windows_vss is enabled for EC2 instance backups | `string 'enabled' or 'disabled'` | `disabled` | no |
 
