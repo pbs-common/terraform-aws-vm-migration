@@ -145,9 +145,11 @@ class CheckerSelfTest(unittest.TestCase):
         self.assert_rejected("no paths filter fires for .tflint.hcl")
 
     def test_dropping_the_reusable_workflows_from_the_filters_is_rejected(self) -> None:
+        """Now that terraform-plan.yaml is external, ad.yaml itself is the only local
+        file deciding the plan's inputs -- it needs its own filter protection."""
         edit(self.repo / ".github/workflows/ad.yaml", '      - ".github/workflows/**"\n', "",
              expect=2)
-        self.assert_rejected(".github/workflows/terraform-plan.yaml")
+        self.assert_rejected(".github/workflows/ad.yaml")
 
     # ---- check 1: tflint running without a usable config ------------------------
     def test_tflint_without_config_file_is_rejected(self) -> None:
@@ -368,9 +370,9 @@ class CheckerSelfTest(unittest.TestCase):
         self.assert_rejected("does not exist")
 
     def test_a_repository_with_no_tflint_anywhere_is_rejected(self) -> None:
-        """Both tflint steps must go: removing only the plan pipeline's leaves the
-        directory-lint job still running it, which is a different (and also caught)
-        defect. The vacuity check is about tflint being absent EVERYWHERE."""
+        """All three tflint sources must go: the local plan pipeline, the direct-lint job,
+        and every caller's trust in the shared plan workflow. Removing only some leaves a
+        different (also caught) defect -- vacuity means absent EVERYWHERE."""
         edit(self.repo / ".github/workflows/terraform-plan.yaml",
              "          tflint --init\n          tflint --format compact\n",
              "          echo skipped\n")
@@ -379,6 +381,12 @@ class CheckerSelfTest(unittest.TestCase):
              '            ( cd "$d" && echo skipped ) || FAILED=1\n')
         edit(self.repo / ".github/workflows/ci-coverage.yaml",
              "          tflint --init\n", "          echo skipped\n")
+        # Also break the trusted external reference, or vacuity stays satisfied by trust
+        # alone and only check 7 catches this.
+        for name in ("ad", "dev", "staging", "prod", "workspaces"):
+            edit(self.repo / f".github/workflows/{name}.yaml",
+                 "shared-ghpipeline/.github/workflows/terraform-plan.yaml@",
+                 "shared-ghpipeline/.github/workflows/terraform-plan-renamed.yaml@")
         self.assert_rejected("no workflow in .github/workflows runs tflint")
 
 
@@ -441,6 +449,56 @@ class TflintInvocationGrammar(unittest.TestCase):
                 self.assertEqual(conditions, [])
                 self.assertIn(checker.resolve_env(envs, "TFLINT_CONFIG_FILE"),
                               checker.ROOT_CONFIG_VALUES)
+
+
+class SharedPlanWorkflowGrammar(unittest.TestCase):
+    """is_shared_plan_workflow: must not trust a near-miss."""
+
+    def test_the_real_reference_with_a_commit_sha_is_trusted(self) -> None:
+        self.assertTrue(checker.is_shared_plan_workflow(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c"))
+
+    def test_a_branch_ref_is_not_trusted(self) -> None:
+        """@main is a moving target -- verification only covers the pinned commit."""
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@main"))
+
+    def test_an_unverified_sha_is_not_trusted(self) -> None:
+        """Valid SHA format, but not the one we reviewed."""
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@0000000000000000000000000000000000000000"))
+
+    def test_a_local_reference_is_not_trusted(self) -> None:
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "./.github/workflows/terraform-plan.yaml"))
+
+    def test_missing_ref_is_not_trusted(self) -> None:
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-plan.yaml"))
+
+    def test_a_different_workflow_in_the_same_repo_is_not_trusted(self) -> None:
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-apply.yaml@main"))
+
+    def test_a_different_repo_with_the_same_workflow_name_is_not_trusted(self) -> None:
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "some-fork/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@main"))
+
+    def test_is_plan_capable_accepts_either_form(self) -> None:
+        local_capable = {"./.github/workflows/terraform-plan.yaml"}
+        self.assertTrue(checker.is_plan_capable(
+            "./.github/workflows/terraform-plan.yaml", local_capable))
+        self.assertTrue(checker.is_plan_capable(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c", local_capable))
+        self.assertFalse(checker.is_plan_capable(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@main", local_capable))
 
 
 class ConditionEvaluator(unittest.TestCase):

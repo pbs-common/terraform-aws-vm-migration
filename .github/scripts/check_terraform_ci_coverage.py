@@ -526,6 +526,45 @@ def lint_capable(workflows: list[dict]) -> set[str]:
             if not unclear and not conds}
 
 
+# The org's shared reusable-workflow repo. A caller pointing here instead of at a local
+# ./... path can't be verified by reading the file -- it lives in another repo. Trusted
+# once, by hand: that repo's terraform-plan.yaml runs tflint, same as the local copy used to.
+SHARED_PLAN_WORKFLOW = "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-plan.yaml"
+
+# Commits of SHARED_PLAN_WORKFLOW manually checked to run tflint. A branch like @main
+# or any other SHA isn't -- add one here only after reading it.
+SHARED_PLAN_WORKFLOW_VERIFIED_REFS = frozenset({
+    "6508cefe56f5aaefac031c1382dad73c1d698b2c",
+})
+
+
+def is_shared_plan_workflow(uses: str) -> bool:
+    """True for `<SHARED_PLAN_WORKFLOW>@<verified commit>`, exact ref match only."""
+    path, sep, ref = uses.partition("@")
+    return sep == "@" and path == SHARED_PLAN_WORKFLOW and ref in SHARED_PLAN_WORKFLOW_VERIFIED_REFS
+
+
+def is_plan_capable(uses: str, capable: set[str]) -> bool:
+    """True if this `uses:` value runs tflint as part of planning -- a verified local path,
+    or the one trusted external reference."""
+    return uses in capable or is_shared_plan_workflow(uses)
+
+
+def any_caller_uses_shared_plan_workflow(workflows: list[dict]) -> bool:
+    """True if some workflow here calls the trusted external workflow. Keeps the VACUITY
+    check meaningful once the local terraform-plan.yaml is deleted and lint_capable() goes
+    empty -- tflint still runs, just externally."""
+    for wf in workflows:
+        jobs = wf["doc"].get("jobs")
+        if not isinstance(jobs, dict):
+            continue
+        for job in jobs.values():
+            if isinstance(job, dict) and isinstance(job.get("uses"), str) \
+                    and is_shared_plan_workflow(job["uses"]):
+                return True
+    return False
+
+
 def resolve_env(envs: tuple[dict, ...], name: str):
     """First definition wins, scopes ordered most-specific first. Returns None if unset.
 
@@ -613,7 +652,7 @@ def planned_dirs(doc: dict, capable: set[str], rel: str) -> tuple[list[str], lis
         if not isinstance(job, dict):
             continue
         uses, with_ = job.get("uses"), job.get("with")
-        if not isinstance(uses, str) or not isinstance(with_, dict) or uses not in capable:
+        if not isinstance(uses, str) or not isinstance(with_, dict) or not is_plan_capable(uses, capable):
             continue
         wd = with_.get("working_directory")
         if not isinstance(wd, str) or wd in (".", ""):
@@ -681,7 +720,7 @@ def run(repo: Path) -> list[str]:
         return failures
 
     capable = lint_capable(workflows)
-    if not capable:
+    if not capable and not any_caller_uses_shared_plan_workflow(workflows):
         failures.append(
             "no workflow in .github/workflows runs tflint, so no directory can be covered; "
             "if linting moved, update the tflint grammar rather than deleting this check"
@@ -799,6 +838,10 @@ def run(repo: Path) -> list[str]:
         shared = [TFLINT_CONFIG] + sorted(
             w[2:] for w in called_workflows(caller["doc"]) if w.startswith("./")
         )
+        # The caller's own file now decides the plan's inputs -- called_workflows() can't
+        # catch that for an external uses:, so protect the caller file directly.
+        if any_caller_uses_shared_plan_workflow([caller]):
+            shared.append(caller["rel"])
         for path in shared:
             if not (repo / path).exists():
                 continue  # reported by check 5 if it is a filter; otherwise not our business
