@@ -4,9 +4,11 @@ This repo runs Terraform through GitHub Actions. Pipelines are split into two la
 
 - **Entrypoint workflows** — one per environment. They own the triggers (push, PR, manual) and
   wire together the reusable jobs. Today only `ad.yaml` exists.
-- **Repository-wide checks** — `ci-coverage.yaml`, deliberately unfiltered. It lints every
-  `environments/*` and `modules/*` directory directly, so a new one is covered automatically
-  instead of depending on some entrypoint's `paths:` filter to notice it. See
+- **Repository-wide checks** — `ci-coverage.yaml`, deliberately unfiltered. Every *entrypoint*
+  workflow has a `paths:` list (the reusable workflows have no triggers of their own at all), so
+  a new `environments/*` or `modules/*` directory matches nobody's filters and passes CI by never
+  being looked at. This one runs on every pull request and fails if any Terraform directory is
+  neither covered by a workflow nor recorded as a deliberate exclusion. See
   [Coverage](#coverage-every-terraform-directory-is-linted).
 - **Reusable workflows** — `terraform-validate`, `terraform-plan`, `terraform-apply`,
   `terraform-destroy`. They are `workflow_call`-only building blocks and are never run directly
@@ -224,37 +226,59 @@ Same input surface as apply, but runs `terraform destroy --var-file <environment
 
 ## Coverage: every Terraform directory is linted
 
-CI lints Terraform directly, not through the plan pipeline. `terraform-plan.yaml` runs tflint
-too, but it's a reusable workflow that only runs where some entrypoint points it — and since
-entrypoints now call the shared `pbs-common/terraform-aws-shared-ghpipeline` repo, this repo
-can't verify what that pipeline covers. So an unconditional, credential-free job lints every
-directory on disk directly, regardless of which repo plans it.
+CI lints Terraform with tflint inside `terraform-plan.yaml`. That is a *reusable* workflow, so it
+only ever runs for a directory some entrypoint points it at, and only when that entrypoint's
+`paths:` filters fire. Two things follow, and both were live defects on 2026-09-11:
+
+- **A directory no filter matches is not linted at all.** `environments/org-delegation` and
+  `modules/mgn-organizations-delegation` merged unlinted while the repository looked covered.
+- **A module an environment consumes but no filter names is not linted either.** Editing it
+  changes that environment's plan and triggers nothing. `modules/ssm-session-access-policy` was in
+  that state despite being consumed by `environments/ad/main.tf`.
 
 `ci-coverage.yaml` runs `.github/scripts/check_terraform_ci_coverage.py` on every pull request,
-unfiltered. It enforces two things:
+with no path filter of its own. It enforces six things:
 
-1. **Config** — every tflint step resolves `TFLINT_CONFIG_FILE` to the root `.tflint.hcl`. An
-   empty value or one pointing elsewhere fails, same as leaving it unset.
-2. **Direct lint** — an unfiltered workflow runs tflint in each directory, driven by
-   `check_terraform_ci_coverage.py --list-dirs`, so a new directory is picked up automatically.
+1. **Config** — every step that runs tflint resolves `TFLINT_CONFIG_FILE` to the root
+   `.tflint.hcl`. Presence of the name is not enough: scope precedence is resolved, and an empty
+   value or one pointing elsewhere fails, because both leave tflint reading its working directory
+   exactly as if the variable were unset.
+2. **Coverage** — every Terraform directory is covered or excluded, never neither and never both.
+3. **Dependency** — a workflow that plans an environment filters on every module that environment
+   consumes, derived from the environment's own `source` lines.
+4. **Shared inputs** — a workflow that plans anything also filters on `.tflint.hcl` and on every
+   reusable workflow it calls. Without this a pull request changing the linting runs no lint.
+5. **Staleness** — every filter (on `push` as well as `pull_request`), every `working_directory`
+   and every exclusion still names something that exists.
+6. **Vacuity** — the inventory roots exist and are non-empty, and something actually runs tflint.
+7. **Direct lint** — an unfiltered workflow runs tflint *in each Terraform directory*, driven by
+   `check_terraform_ci_coverage.py --list-dirs` so the lint loop and the coverage check share one
+   enumeration.
 
-**Planning an environment does not lint the modules it consumes**, which is why this lints
-directly. Measured with duplicate map keys reintroduced into `modules/mgn-replication-baseline`:
+**Planning an environment does not lint the modules it consumes**, which is why check 7 exists and
+why the `lint` job is separate from the plan pipeline rather than a duplicate of it. Measured with
+duplicate map keys reintroduced into `modules/mgn-replication-baseline`:
 
     tflint from environments/ad (which consumes it)   exit 0
     tflint in the module directory                    exit 2
 
-tflint's module support only checks what's tied to passed variables; syntax rules don't descend.
-So a module is linted only in its own directory — this job does that for every directory, no AWS
-credentials needed, covering what the plan pipeline deliberately can't (`environments/org-delegation`
-included).
+tflint reports only child-module issues tied to passed variables, and its syntax rules do not
+descend into child modules. So a module is linted only by running tflint where the module lives.
+The `lint` job does that for every directory, needs no AWS credentials, and therefore also covers
+directories the plan pipeline deliberately cannot — `environments/org-delegation` included.
 
-(This used to also verify a reusable workflow was wired up to actually plan each environment.
-Dropped 2026-10-02 once the plan/apply pipelines moved to the shared repo — this repo can't see
-what runs there.)
+Checks 2 and 3 are consequently about **plan** coverage, and the exclusions manifest lists
+directories with no plan coverage. Nothing opts out of linting.
 
-Anything the script can't model — `paths-ignore`, an unrecognised tflint invocation, nested
-Terraform, an unparseable workflow — **fails**. "Could not verify" must never read as a pass.
+Coverage is deliberately not inferred from a path filter alone. A filter matching a module that no
+planned environment consumes triggers a run that never loads that module, so it is not coverage. A
+plan job whose `if:` is false for pull requests is not coverage either — the condition is evaluated,
+not ignored.
+
+Anything the script cannot model — `paths-ignore`, an unsupported glob, an `if:` outside its small
+expression subset, a tflint invoked in a form its grammar does not recognise, Terraform nested below
+an inventory root, an unparseable workflow — **fails**. A checker has three outcomes, and the third
+one quietly joining "pass" is the defect class this whole thing exists to prevent.
 
 ### Why tflint needs `TFLINT_CONFIG_FILE`
 
@@ -269,9 +293,12 @@ to it unless the path is passed explicitly. Measured with the pinned 0.64.0 from
     TFLINT_CONFIG_FILE=<root>   + ruleset.aws (0.44.0)
                                 + ruleset.terraform (0.15.0-bundled)
 
-Nothing opts out of linting — there is no way to exclude a directory from the `lint` job, by
-design. `environments/org-delegation` isn't wired into the plan pipeline (see its own README for
-why), but it's still linted like every other directory.
+### Excluding a directory
+
+A directory that genuinely should not be **planned** goes in
+[`.github/terraform-ci-coverage-exclusions.json`](../terraform-ci-coverage-exclusions.json) with a
+reason. It is still linted — there is no way to exclude a directory from the `lint` job, by design. The check asserts both directions: an excluded directory must still exist, and must **not**
+also be covered — so an exclusion cannot outlive the reason recorded for it.
 
 `.github/scripts/test_check_terraform_ci_coverage.py` is the checker's mutation self-test. It
 reintroduces each defect shape into a copy of this repository and requires the checker to reject
@@ -289,9 +316,10 @@ looks exactly like a clean repository.
    that account's role. Add required reviewers for anything production-facing.
 3. Confirm the role works by running **Test OIDC Credentials** and checking the account ID.
 4. Copy `ad.yaml` to `<name>.yaml`, updating: the `pull_request` path filters, `working_directory`,
-   `environment`, `s3_backend_bucket`, `s3_backend_key`, and `aws_region`. The path filters should
-   name the new environment and every module it consumes, so a PR touching either actually plans
-   it — `ci-coverage.yaml` doesn't check this, only that the new directory gets linted.
+   `environment`, `s3_backend_bucket`, `s3_backend_key`, and `aws_region`. The path filters must
+   name the new environment **and every module it consumes**, or CI will not run when one of those
+   modules changes. `ci-coverage.yaml` fails the pull request if either is missing, so this is
+   enforced rather than remembered.
 5. Update [environments/README.md](../../environments/README.md) with the new row.
 
 ---

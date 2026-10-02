@@ -24,6 +24,7 @@ Run: python .github/scripts/test_check_terraform_ci_coverage.py
 
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 import tempfile
@@ -52,8 +53,10 @@ def clone_repo(dest: Path) -> Path:
 def edit(path: Path, old: str, new: str, *, expect: int = 1, only: int | None = None) -> None:
     """Replace `old` with `new`, asserting it appeared exactly `expect` times.
 
-    `only=N` mutates just the Nth (1-based) occurrence, for a mutation that must reach one
-    trigger and not another.
+    ad.yaml repeats its path list under `push` and `pull_request`, so a filter line occurs
+    twice; `expect=2` mutates both, which is what "edit both or neither" means. `only=N`
+    mutates just the Nth (1-based) occurrence, for a mutation that must reach one trigger
+    and not the other.
     """
     text = path.read_text(encoding="utf-8")
     count = text.count(old)
@@ -92,8 +95,59 @@ class CheckerSelfTest(unittest.TestCase):
             "nothing about the checker's ability to discriminate",
         )
 
-    # A new environments/* or modules/* directory needs no workflow change to be linted --
-    # --list-dirs picks it up automatically. Nothing to reject here, so no test for it.
+    # ---- check 2: an uncovered ADDITION, the defect issue #38 is about ------------
+    def test_new_environment_directory_is_rejected(self) -> None:
+        new = self.repo / "environments" / "brand-new-env"
+        new.mkdir()
+        (new / "main.tf").write_text('resource "null_resource" "x" {}\n')
+        self.assert_rejected("environments/brand-new-env: contains Terraform but no workflow")
+
+    def test_new_module_directory_is_rejected(self) -> None:
+        new = self.repo / "modules" / "brand-new-module"
+        new.mkdir()
+        (new / "main.tf").write_text('variable "x" { type = string }\n')
+        self.assert_rejected("modules/brand-new-module: contains Terraform but no workflow")
+
+    def test_a_path_filter_alone_does_not_make_a_module_covered(self) -> None:
+        """A filter matching a module nothing plans triggers a run that never loads it.
+
+        Counting that as coverage was a real defect: `modules/unconsumed` below is named
+        in ad.yaml's filters, so the AD plan runs when it changes -- and that plan never
+        reads the module, so tflint never lints it.
+        """
+        new = self.repo / "modules" / "unconsumed"
+        new.mkdir()
+        (new / "main.tf").write_text('variable "x" { type = string }\n')
+        edit(self.repo / ".github/workflows/ad.yaml",
+             '      - "modules/ssm-session-access-policy/**"\n',
+             '      - "modules/ssm-session-access-policy/**"\n      - "modules/unconsumed/**"\n',
+             expect=2)
+        self.assert_rejected("modules/unconsumed: contains Terraform but no workflow")
+
+    # ---- check 3: a module consumed by a planned environment but unfiltered -------
+    def test_dropping_a_consumed_module_from_the_filters_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml",
+             '      - "modules/ssm-session-access-policy/**"\n', "", expect=2)
+        self.assert_rejected("consumes modules/ssm-session-access-policy")
+
+    def test_a_newly_consumed_module_must_be_filtered(self) -> None:
+        new = self.repo / "modules" / "late-arrival"
+        new.mkdir()
+        (new / "main.tf").write_text('variable "x" { type = string }\n')
+        main = self.repo / "environments/ad/main.tf"
+        main.write_text(main.read_text()
+                        + '\nmodule "late" {\n  source = "../../modules/late-arrival"\n}\n')
+        self.assert_rejected("consumes modules/late-arrival")
+
+    # ---- check 4: shared inputs that decide what the plan and lint DO ------------
+    def test_dropping_the_tflint_config_from_the_filters_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml", '      - ".tflint.hcl"\n', "", expect=2)
+        self.assert_rejected("no paths filter fires for .tflint.hcl")
+
+    # Removed: this used to drop ".github/workflows/**" and expect a rejection mentioning
+    # terraform-plan.yaml, back when ad.yaml called it locally. All entrypoints now call
+    # the shared repo instead, so there's no local file left for check 4 to protect here.
+    # Re-add if a workflow ever calls a local reusable workflow again.
 
     # ---- check 1: tflint running without a usable config ------------------------
     def test_tflint_without_config_file_is_rejected(self) -> None:
@@ -165,15 +219,15 @@ class CheckerSelfTest(unittest.TestCase):
         self.assert_rejected("not a recognised spelling")
 
     def test_a_conditional_tflint_step_is_rejected(self) -> None:
-        """`if: false` on the lint step would disable linting repository-wide."""
+        """`if: false` on the lint step would disable linting repository-wide while every
+        caller still counted as covered."""
         edit(self.repo / ".github/workflows/terraform-plan.yaml",
              "      - name: Run TFLint\n        env:\n",
              "      - name: Run TFLint\n        if: false\n        env:\n")
         self.assert_rejected("runs tflint under a condition")
 
-    # ---- check 2: direct lint, the one thing this checker now enforces ----------
     def test_removing_the_direct_lint_job_is_rejected(self) -> None:
-        """The core guarantee. Planning an environment does not lint its modules, so
+        """The model fix itself. Planning an environment does not lint its modules, so
         without this job a module regression ships with CI green."""
         wf = self.repo / ".github/workflows/ci-coverage.yaml"
         text = wf.read_text()
@@ -190,29 +244,120 @@ class CheckerSelfTest(unittest.TestCase):
              '  pull_request:\n    paths:\n      - "environments/**"\n')
         self.assert_rejected("no unfiltered workflow runs tflint in each directory")
 
-    def test_an_unparseable_trigger_on_the_lint_job_is_rejected(self) -> None:
-        """paths-ignore on the lint job's own trigger isn't modelled, so it can no
-        longer be confirmed unfiltered -- same failure as removing it outright."""
-        edit(self.repo / ".github/workflows/ci-coverage.yaml",
-             "  pull_request:\n",
-             '  pull_request:\n    paths-ignore:\n      - "docs/**"\n')
-        self.assert_rejected("no unfiltered workflow runs tflint in each directory")
+    # ---- check 3/coverage: a job gated off for pull requests is not coverage -----
+    # plan-ad is unconditional, so these gate it off rather than rewriting an existing if:.
+    PLAN_AD_HEADER = "  plan-ad:\n    name: Plan AD Environment\n    needs: validate-ad\n"
+
+    def test_a_plan_job_gated_off_for_pull_requests_is_not_coverage(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml", self.PLAN_AD_HEADER,
+             self.PLAN_AD_HEADER + "    if: github.event_name == 'push'\n")
+        self.assert_rejected("environments/ad: contains Terraform but no workflow")
+
+    def test_an_unmodelled_if_condition_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml", self.PLAN_AD_HEADER,
+             self.PLAN_AD_HEADER + "    if: success() && github.event_name == 'pull_request'\n")
+        self.assert_rejected("cannot evaluate")
+
+    # ---- check 5: the manifest, the filters and the directories going stale ------
+    def test_exclusion_for_a_directory_that_does_not_exist_is_rejected(self) -> None:
+        path = self.repo / checker.EXCLUSIONS_FILE
+        doc = json.loads(path.read_text())
+        doc["excluded"].append({"path": "modules/deleted-long-ago", "reason": "stale"})
+        path.write_text(json.dumps(doc, indent=2))
+        self.assert_rejected("modules/deleted-long-ago is excluded but is not a Terraform directory")
+
+    def test_exclusion_without_a_reason_is_rejected(self) -> None:
+        path = self.repo / checker.EXCLUSIONS_FILE
+        doc = json.loads(path.read_text())
+        doc["excluded"].append({"path": "environments/ad"})
+        path.write_text(json.dumps(doc, indent=2))
+        self.assert_rejected("has no 'reason'")
+
+    def test_excluded_but_actually_covered_is_rejected(self) -> None:
+        path = self.repo / checker.EXCLUSIONS_FILE
+        doc = json.loads(path.read_text())
+        doc["excluded"].append({"path": "environments/ad", "reason": "no longer true"})
+        path.write_text(json.dumps(doc, indent=2))
+        self.assert_rejected("AND covered by")
+
+    def test_path_filter_matching_nothing_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml",
+             '      - "environments/ad/**"\n',
+             '      - "environments/ad/**"\n      - "modules/renamed-away/**"\n',
+             expect=2)
+        self.assert_rejected("matches nothing on disk")
+
+    def test_a_stale_PUSH_filter_is_rejected(self) -> None:
+        """Filters live on push as well as pull_request. Reading only pull_request let a
+        stale push filter silently stop the main-branch plan while the checker reported
+        every filter healthy."""
+        # Added INTO push's existing list, not as a second `paths:` key -- PyYAML keeps only
+        # the last of a duplicated key, which would discard the mutation silently.
+        edit(self.repo / ".github/workflows/ad.yaml",
+             '      - "environments/ad/**"\n',
+             '      - "environments/ad/**"\n      - "modules/gone-away/**"\n',
+             expect=2, only=1)
+        self.assert_rejected("matches nothing on disk")
+
+    def test_a_stale_filter_in_a_PUSH_ONLY_workflow_is_rejected(self) -> None:
+        """Staleness must not be gathered only from workflows that turn out to be
+        callers. A push-only workflow was discarded before its filters were examined, so
+        a stale filter there was never checked while the guarantee said otherwise."""
+        (self.repo / ".github/workflows/push-only.yaml").write_text(
+            "name: push only\n"
+            "on:\n"
+            "  push:\n"
+            "    branches: [main]\n"
+            '    paths:\n      - "modules/vanished/**"\n'
+            "jobs:\n"
+            "  noop:\n"
+            "    runs-on: ubuntu-latest\n"
+            "    steps:\n"
+            "      - run: echo hi\n")
+        self.assert_rejected("paths filter 'modules/vanished/**' matches nothing on disk")
+
+    def test_paths_ignore_on_push_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml",
+             "  push:\n    branches:\n      - main\n",
+             '  push:\n    branches:\n      - main\n    paths-ignore:\n      - "docs/**"\n')
+        self.assert_rejected("paths-ignore is not modelled")
+
+    def test_working_directory_that_does_not_exist_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml",
+             '      tflint_version: "0.64.0"\n      aws_region: us-east-1\n'
+             "      working_directory: environments/ad\n",
+             '      tflint_version: "0.64.0"\n      aws_region: us-east-1\n'
+             "      working_directory: environments/gone\n")
+        self.assert_rejected("is not a directory containing .tf files")
 
     # ---- three-state: what the checker cannot model must FAIL, never skip ---------
+    def test_unsupported_glob_shape_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml",
+             '      - "environments/ad/**"\n',
+             '      - "environments/ad/**"\n      - "modules/*/main.tf"\n',
+             expect=2)
+        self.assert_rejected("glob syntax this script does not model")
+
+    def test_paths_ignore_on_pull_request_is_rejected(self) -> None:
+        edit(self.repo / ".github/workflows/ad.yaml",
+             "  pull_request:\n    branches:\n      - main\n",
+             '  pull_request:\n    branches:\n      - main\n    paths-ignore:\n      - "docs/**"\n')
+        self.assert_rejected("paths-ignore is not modelled")
+
     def test_unparseable_workflow_is_rejected(self) -> None:
         (self.repo / ".github/workflows/broken.yaml").write_text(
             "name: broken\non:\n  pull_request:\njobs:\n  a: [unclosed\n")
         self.assert_rejected("will not parse as YAML")
 
     def test_terraform_nested_below_an_inventory_root_is_rejected(self) -> None:
-        """The inventory models immediate children only. A nested directory would never
-        be listed by --list-dirs while the invariant claims to cover everything."""
+        """The inventory models immediate children only. A nested directory would be
+        neither covered nor excluded while the invariant claims to cover everything."""
         nested = self.repo / "modules" / "ec2-workload" / "submodule"
         nested.mkdir()
         (nested / "main.tf").write_text('variable "x" { type = string }\n')
         self.assert_rejected("Terraform nested below modules/ec2-workload")
 
-    # ---- an empty inventory must not agree with everything -----------------------
+    # ---- vacuity: an empty inventory must not agree with everything ---------------
     def test_empty_inventory_root_is_rejected(self) -> None:
         shutil.rmtree(self.repo / "modules")
         (self.repo / "modules").mkdir()
@@ -223,8 +368,9 @@ class CheckerSelfTest(unittest.TestCase):
         self.assert_rejected("does not exist")
 
     def test_a_repository_with_no_tflint_anywhere_is_rejected(self) -> None:
-        """Both tflint steps must go: removing only the plan pipeline's leaves the
-        direct-lint job still running it, a different (also caught) defect."""
+        """All three tflint sources must go: the local plan pipeline, the direct-lint job,
+        and every caller's trust in the shared plan workflow. Removing only some leaves a
+        different (also caught) defect -- vacuity means absent EVERYWHERE."""
         edit(self.repo / ".github/workflows/terraform-plan.yaml",
              "          tflint --init\n          tflint --format compact\n",
              "          echo skipped\n")
@@ -233,7 +379,13 @@ class CheckerSelfTest(unittest.TestCase):
              '            ( cd "$d" && echo skipped ) || FAILED=1\n')
         edit(self.repo / ".github/workflows/ci-coverage.yaml",
              "          tflint --init\n", "          echo skipped\n")
-        self.assert_rejected("no unfiltered workflow runs tflint in each directory")
+        # Also break the trusted external reference, or vacuity stays satisfied by trust
+        # alone and only check 7 catches this.
+        for name in ("ad", "dev", "staging", "prod", "workspaces"):
+            edit(self.repo / f".github/workflows/{name}.yaml",
+                 "shared-ghpipeline/.github/workflows/terraform-plan.yaml@",
+                 "shared-ghpipeline/.github/workflows/terraform-plan-renamed.yaml@")
+        self.assert_rejected("no workflow in .github/workflows runs tflint")
 
 
 class TflintInvocationGrammar(unittest.TestCase):
@@ -241,8 +393,8 @@ class TflintInvocationGrammar(unittest.TestCase):
 
     The rejection cases are not hypothetical: the first version of this checker used
     `startswith("tflint")`, which matched the workflow input declaration
-    `tflint_version:`. terraform-plan.yaml therefore counted as lint-capable even with
-    every tflint command removed from it. A prefix test is not a grammar.
+    `tflint_version:`. terraform-plan.yaml therefore counted as lint-capable with every
+    tflint command removed from it, and the whole coverage model rested on that answer.
     """
 
     def invokes(self, block: str) -> bool:
@@ -297,20 +449,127 @@ class TflintInvocationGrammar(unittest.TestCase):
                               checker.ROOT_CONFIG_VALUES)
 
 
-class TriggerBlockParsing(unittest.TestCase):
+class SharedPlanWorkflowGrammar(unittest.TestCase):
+    """is_shared_plan_workflow: must not trust a near-miss."""
+
+    def test_the_real_reference_with_a_commit_sha_is_trusted(self) -> None:
+        self.assertTrue(checker.is_shared_plan_workflow(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c"))
+
+    def test_the_real_reference_with_a_branch_ref_is_trusted(self) -> None:
+        self.assertTrue(checker.is_shared_plan_workflow(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@main"))
+
+    def test_a_local_reference_is_not_trusted(self) -> None:
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "./.github/workflows/terraform-plan.yaml"))
+
+    def test_missing_ref_is_not_trusted(self) -> None:
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-plan.yaml"))
+
+    def test_a_different_workflow_in_the_same_repo_is_not_trusted(self) -> None:
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-apply.yaml@main"))
+
+    def test_a_different_repo_with_the_same_workflow_name_is_not_trusted(self) -> None:
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "some-fork/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@main"))
+
+    def test_is_plan_capable_accepts_either_form(self) -> None:
+        local_capable = {"./.github/workflows/terraform-plan.yaml"}
+        self.assertTrue(checker.is_plan_capable(
+            "./.github/workflows/terraform-plan.yaml", local_capable))
+        self.assertTrue(checker.is_plan_capable(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@main", local_capable))
+        self.assertFalse(checker.is_plan_capable(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-apply.yaml@main", local_capable))
+
+
+class ConditionEvaluator(unittest.TestCase):
+    """The `if:` subset, both directions."""
+
+    PR = checker.PULL_REQUEST_CONTEXT
+
+    def test_conditions_true_for_a_pull_request(self) -> None:
+        for expr in ("github.event_name == 'pull_request'",
+                     "github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'",
+                     "${{ github.event_name == 'pull_request' }}",
+                     "github.event_name != 'push'",
+                     "(github.event_name == 'push' || github.event_name == 'pull_request')"):
+            with self.subTest(expr=expr):
+                self.assertTrue(checker.evaluate_condition(expr, self.PR))
+
+    def test_conditions_false_for_a_pull_request(self) -> None:
+        for expr in ("github.event_name == 'push'",
+                     "github.ref == 'refs/heads/main'",
+                     "github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')",
+                     "github.event_name == 'push' && github.event_name == 'pull_request'"):
+            with self.subTest(expr=expr):
+                self.assertFalse(checker.evaluate_condition(expr, self.PR))
+
+    def test_the_real_ad_yaml_conditions_evaluate_as_observed(self) -> None:
+        """Ground the evaluator in the file it judges: plan-ad runs for every trigger
+        ad.yaml declares, apply-ad never runs on a pull request."""
+        import yaml
+        doc = yaml.safe_load((REPO / ".github/workflows/ad.yaml").read_text())
+        jobs = doc["jobs"]
+        self.assertNotIn("if", jobs["plan-ad"],
+                         "plan-ad is unconditional; gating it off would uncover environments/ad")
+        self.assertFalse(checker.evaluate_condition(jobs["apply-ad"]["if"], self.PR))
+
+    def test_unmodelled_expressions_raise_rather_than_defaulting(self) -> None:
+        for expr in ("success()",
+                     "github.actor == 'someone'",
+                     "!cancelled()",
+                     "github.event_name == \"pull_request\"",
+                     "github.event_name == 'pull_request' && ("):
+            with self.subTest(expr=expr):
+                with self.assertRaises(checker.Unsupported):
+                    checker.evaluate_condition(expr, self.PR)
+
+
+class MatcherSemantics(unittest.TestCase):
+    """The path-filter subset, both directions. A matcher proven only on the strings it
+    must accept is half a matcher."""
+
+    def test_recursive_pattern_matches_only_inside_the_directory(self) -> None:
+        self.assertTrue(checker.matches("modules/a/**", "modules/a/main.tf"))
+        self.assertTrue(checker.matches("modules/a/**", "modules/a/deep/main.tf"))
+        self.assertFalse(checker.matches("modules/a/**", "modules/a"))
+        self.assertFalse(checker.matches("modules/a/**", "modules/ab/main.tf"))
+        self.assertFalse(checker.matches("modules/a/**", "modules/b/main.tf"))
+
+    def test_literal_pattern_matches_exactly(self) -> None:
+        self.assertTrue(checker.matches(".tflint.hcl", ".tflint.hcl"))
+        self.assertFalse(checker.matches(".tflint.hcl", ".tflint.hcl.bak"))
+        self.assertFalse(checker.matches("a/b.tf", "a/b.tf/c"))
+
+    def test_covers_dir_is_true_only_for_the_named_directory(self) -> None:
+        self.assertTrue(checker.covers_dir("modules/a/**", "modules/a"))
+        self.assertFalse(checker.covers_dir("modules/a/**", "modules/ab"))
+        self.assertFalse(checker.covers_dir("modules/a", "modules/a"))
+
+    def test_unsupported_shapes_raise_rather_than_returning_false(self) -> None:
+        for pattern in ("modules/*/main.tf", "**/*.tf", "!modules/a/**", "modules/a?/**"):
+            with self.subTest(pattern=pattern):
+                with self.assertRaises(checker.Unsupported):
+                    checker.matches(pattern, "modules/a/main.tf")
+
     def test_yaml_one_dot_one_boolean_on_key_is_handled(self) -> None:
         """PyYAML parses the bare key `on` as True. Reading doc['on'] would report 'no
-        triggers' for every real workflow, silently making the lint job unfindable."""
+        triggers' for every real workflow, silently making every directory uncovered."""
         import yaml
         doc = yaml.safe_load("on:\n  pull_request:\n    paths:\n      - \"x/**\"\n")
         self.assertIn(True, doc, "precondition: PyYAML must still fold `on` to the boolean")
         self.assertNotIn("on", doc)
         self.assertEqual(checker.trigger_filters(doc, "pull_request"), (True, ["x/**"]))
-
-    def test_paths_ignore_is_unsupported(self) -> None:
-        doc = {"on": {"pull_request": {"paths-ignore": ["docs/**"]}}}
-        with self.assertRaises(checker.Unsupported):
-            checker.trigger_filters(doc, "pull_request")
 
 
 if __name__ == "__main__":
