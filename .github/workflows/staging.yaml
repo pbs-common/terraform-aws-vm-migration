@@ -57,7 +57,7 @@ jobs:
   # Step 1: Validate Terraform format
   validate-staging:
     name: Validate Format
-    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-validate.yaml@main
+    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-validate.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c
     with:
       terraform_version: "1.16.0"
       working_directory: environments/staging
@@ -68,7 +68,7 @@ jobs:
   plan-staging:
     name: Plan Staging Environment
     needs: validate-staging
-    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-plan.yaml@main
+    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-plan.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c
     with:
       terraform_version: "1.16.0"
       tflint_version: "0.64.0"
@@ -91,7 +91,7 @@ jobs:
   apply-staging:
     name: Apply Staging Environment
     needs: plan-staging
-    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-apply.yaml@main
+    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-apply.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
