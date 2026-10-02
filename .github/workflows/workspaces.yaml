@@ -57,7 +57,7 @@ jobs:
   # Step 1: Validate Terraform format
   validate-workspaces:
     name: Validate Format
-    uses: ./.github/workflows/terraform-validate.yaml
+    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-validate.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c
     with:
       terraform_version: "1.16.0"
       working_directory: environments/workspaces
@@ -68,7 +68,7 @@ jobs:
   plan-workspaces:
     name: Plan Workspaces Environment
     needs: validate-workspaces
-    uses: ./.github/workflows/terraform-plan.yaml
+    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-plan.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c
     with:
       terraform_version: "1.16.0"
       tflint_version: "0.64.0"
@@ -91,7 +91,7 @@ jobs:
   apply-workspaces:
     name: Apply Workspaces Environment
     needs: plan-workspaces
-    uses: ./.github/workflows/terraform-apply.yaml
+    uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-apply.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c
     if: >-
       github.ref == 'refs/heads/main' &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
