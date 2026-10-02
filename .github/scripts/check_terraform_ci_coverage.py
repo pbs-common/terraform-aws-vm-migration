@@ -531,12 +531,17 @@ def lint_capable(workflows: list[dict]) -> set[str]:
 # once, by hand: that repo's terraform-plan.yaml runs tflint, same as the local copy used to.
 SHARED_PLAN_WORKFLOW = "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-plan.yaml"
 
+# Commits of SHARED_PLAN_WORKFLOW manually checked to run tflint. A branch like @main
+# or any other SHA isn't -- add one here only after reading it.
+SHARED_PLAN_WORKFLOW_VERIFIED_REFS = frozenset({
+    "6508cefe56f5aaefac031c1382dad73c1d698b2c",
+})
+
 
 def is_shared_plan_workflow(uses: str) -> bool:
-    """True for `<SHARED_PLAN_WORKFLOW>@<any-ref>`. The ref (branch, tag, or SHA) isn't
-    compared -- it's always required for a cross-repo call, but it's not part of identity."""
+    """True for `<SHARED_PLAN_WORKFLOW>@<verified commit>`, exact ref match only."""
     path, sep, ref = uses.partition("@")
-    return sep == "@" and bool(ref) and path == SHARED_PLAN_WORKFLOW
+    return sep == "@" and path == SHARED_PLAN_WORKFLOW and ref in SHARED_PLAN_WORKFLOW_VERIFIED_REFS
 
 
 def is_plan_capable(uses: str, capable: set[str]) -> bool:
@@ -833,6 +838,10 @@ def run(repo: Path) -> list[str]:
         shared = [TFLINT_CONFIG] + sorted(
             w[2:] for w in called_workflows(caller["doc"]) if w.startswith("./")
         )
+        # The caller's own file now decides the plan's inputs -- called_workflows() can't
+        # catch that for an external uses:, so protect the caller file directly.
+        if any_caller_uses_shared_plan_workflow([caller]):
+            shared.append(caller["rel"])
         for path in shared:
             if not (repo / path).exists():
                 continue  # reported by check 5 if it is a filter; otherwise not our business

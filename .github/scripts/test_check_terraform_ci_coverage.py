@@ -144,10 +144,12 @@ class CheckerSelfTest(unittest.TestCase):
         edit(self.repo / ".github/workflows/ad.yaml", '      - ".tflint.hcl"\n', "", expect=2)
         self.assert_rejected("no paths filter fires for .tflint.hcl")
 
-    # Removed: this used to drop ".github/workflows/**" and expect a rejection mentioning
-    # terraform-plan.yaml, back when ad.yaml called it locally. All entrypoints now call
-    # the shared repo instead, so there's no local file left for check 4 to protect here.
-    # Re-add if a workflow ever calls a local reusable workflow again.
+    def test_dropping_the_reusable_workflows_from_the_filters_is_rejected(self) -> None:
+        """Now that terraform-plan.yaml is external, ad.yaml itself is the only local
+        file deciding the plan's inputs -- it needs its own filter protection."""
+        edit(self.repo / ".github/workflows/ad.yaml", '      - ".github/workflows/**"\n', "",
+             expect=2)
+        self.assert_rejected(".github/workflows/ad.yaml")
 
     # ---- check 1: tflint running without a usable config ------------------------
     def test_tflint_without_config_file_is_rejected(self) -> None:
@@ -457,10 +459,17 @@ class SharedPlanWorkflowGrammar(unittest.TestCase):
             "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
             "terraform-plan.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c"))
 
-    def test_the_real_reference_with_a_branch_ref_is_trusted(self) -> None:
-        self.assertTrue(checker.is_shared_plan_workflow(
+    def test_a_branch_ref_is_not_trusted(self) -> None:
+        """@main is a moving target -- verification only covers the pinned commit."""
+        self.assertFalse(checker.is_shared_plan_workflow(
             "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
             "terraform-plan.yaml@main"))
+
+    def test_an_unverified_sha_is_not_trusted(self) -> None:
+        """Valid SHA format, but not the one we reviewed."""
+        self.assertFalse(checker.is_shared_plan_workflow(
+            "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
+            "terraform-plan.yaml@0000000000000000000000000000000000000000"))
 
     def test_a_local_reference_is_not_trusted(self) -> None:
         self.assertFalse(checker.is_shared_plan_workflow(
@@ -486,10 +495,10 @@ class SharedPlanWorkflowGrammar(unittest.TestCase):
             "./.github/workflows/terraform-plan.yaml", local_capable))
         self.assertTrue(checker.is_plan_capable(
             "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
-            "terraform-plan.yaml@main", local_capable))
+            "terraform-plan.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c", local_capable))
         self.assertFalse(checker.is_plan_capable(
             "pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/"
-            "terraform-apply.yaml@main", local_capable))
+            "terraform-plan.yaml@main", local_capable))
 
 
 class ConditionEvaluator(unittest.TestCase):
