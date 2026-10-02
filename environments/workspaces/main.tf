@@ -206,3 +206,99 @@ import {
   to = aws_instance.i_ng_ws_kt_t1_w
   id = "i-05358ac8ae6ae3398"
 }
+
+resource "aws_instance" "esdev_brian" {
+  ami           = "ami-0f534974106934085"
+  instance_type = "m5.xlarge"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3da41592999f87bc9"
+    "Name"                                         = "ESDEV-BRIAN"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-33ce31344ac32ecb8"
+    "mgn.amazonaws.com-source-server"              = "s-3da41592999f87bc9"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3da41592999f87bc9"
+    "Name"                                         = "ESDEV-BRIAN"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-33ce31344ac32ecb8"
+    "mgn.amazonaws.com-source-server"              = "s-3da41592999f87bc9"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+}
+
+import {
+  to = aws_instance.esdev_brian
+  id = "i-0e71029bbc740a4b2"
+}
+
+resource "aws_instance" "esdev_chex" {
+  ami           = "ami-0d16ebbf0d8306d63"
+  instance_type = "m5.xlarge"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3b9cee0d43ee0e8b4"
+    "Name"                                         = "ESDEV-CHEX"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-33ce31344ac32ecb8"
+    "mgn.amazonaws.com-source-server"              = "s-3b9cee0d43ee0e8b4"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3b9cee0d43ee0e8b4"
+    "Name"                                         = "ESDEV-CHEX"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-33ce31344ac32ecb8"
+    "mgn.amazonaws.com-source-server"              = "s-3b9cee0d43ee0e8b4"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+}
+
+import {
+  to = aws_instance.esdev_chex
+  id = "i-02913429a0e270b18"
+}
+
+resource "aws_instance" "s_si_d1_t1_w" {
+  ami           = "ami-0d16ebbf0d8306d63"
+  instance_type = "m5.xlarge"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3fc69ea2f60bc8b92"
+    "Name"                                         = "s-si-d1-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-31d091482f364113d"
+    "mgn.amazonaws.com-source-server"              = "s-3fc69ea2f60bc8b92"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3fc69ea2f60bc8b92"
+    "Name"                                         = "s-si-d1-t1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-31d091482f364113d"
+    "mgn.amazonaws.com-source-server"              = "s-3fc69ea2f60bc8b92"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+}
+
+import {
+  to = aws_instance.s_si_d1_t1_w
+  id = "i-00c1e14ce9114b57c"
+}
