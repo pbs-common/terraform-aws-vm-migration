@@ -206,3 +206,35 @@ import {
   to = aws_instance.i_ng_ws_kt_t1_w
   id = "i-05358ac8ae6ae3398"
 }
+
+resource "aws_instance" "devops_app1_dev" {
+  ami           = "ami-0f534974106934085"
+  instance_type = "m5.large"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3c61eb947c74d34b9"
+    "Name"                                         = "devops-app1-dev"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-3c9dcb63339ee5e11"
+    "mgn.amazonaws.com-source-server"              = "s-3c61eb947c74d34b9"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-3c61eb947c74d34b9"
+    "Name"                                         = "devops-app1-dev"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-3c9dcb63339ee5e11"
+    "mgn.amazonaws.com-source-server"              = "s-3c61eb947c74d34b9"
+    "pbs:billing:environment"                      = "workspaces"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "Workstation"
+  }
+}
+
+import {
+  to = aws_instance.devops_app1_dev
+  id = "i-0d9ab8addd6e1a4db"
+}
