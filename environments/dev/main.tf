@@ -93,13 +93,24 @@ resource "aws_security_group" "sbap01_sonarqube" {
 
 resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_9000" {
   security_group_id = aws_security_group.sbap01_sonarqube.id
-  description       = "SonarQube web UI"
+  description       = "SonarQube web UI, on-prem"
   from_port         = 9000
   to_port           = 9000
   ip_protocol       = "tcp"
-  cidr_ipv4         = "0.0.0.0/0"
+  cidr_ipv4         = "10.164.0.0/16"
 
   tags = merge(var.tags, { Name = "sbap01-sonarqube-9000" })
+}
+
+resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_9000_aws" {
+  security_group_id = aws_security_group.sbap01_sonarqube.id
+  description       = "SonarQube web UI, ghsd04 CI runner"
+  from_port         = 9000
+  to_port           = 9000
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "10.202.0.0/16"
+
+  tags = merge(var.tags, { Name = "sbap01-sonarqube-9000-aws" })
 }
 
 resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_22" {
@@ -108,7 +119,7 @@ resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_22" {
   from_port         = 22
   to_port           = 22
   ip_protocol       = "tcp"
-  cidr_ipv4         = "0.0.0.0/0"
+  cidr_ipv4         = "10.164.0.0/16"
 
   tags = merge(var.tags, { Name = "sbap01-sonarqube-22" })
 }
@@ -119,7 +130,7 @@ resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_443" {
   from_port         = 443
   to_port           = 443
   ip_protocol       = "tcp"
-  cidr_ipv4         = "0.0.0.0/0"
+  cidr_ipv4         = "10.164.0.0/16"
 
   tags = merge(var.tags, { Name = "sbap01-sonarqube-443" })
 }
@@ -130,7 +141,7 @@ resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_3389" {
   from_port         = 3389
   to_port           = 3389
   ip_protocol       = "tcp"
-  cidr_ipv4         = "0.0.0.0/0"
+  cidr_ipv4         = "10.164.0.0/16"
 
   tags = merge(var.tags, { Name = "sbap01-sonarqube-3389" })
 }
