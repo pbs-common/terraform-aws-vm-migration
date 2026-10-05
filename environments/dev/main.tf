@@ -101,3 +101,36 @@ resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_9000" {
 
   tags = merge(var.tags, { Name = "sbap01-sonarqube-9000" })
 }
+
+resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_22" {
+  security_group_id = aws_security_group.sbap01_sonarqube.id
+  description       = "SSH"
+  from_port         = 22
+  to_port           = 22
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+
+  tags = merge(var.tags, { Name = "sbap01-sonarqube-22" })
+}
+
+resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_443" {
+  security_group_id = aws_security_group.sbap01_sonarqube.id
+  description       = "HTTPS"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+
+  tags = merge(var.tags, { Name = "sbap01-sonarqube-443" })
+}
+
+resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_3389" {
+  security_group_id = aws_security_group.sbap01_sonarqube.id
+  description       = "RDP"
+  from_port         = 3389
+  to_port           = 3389
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+
+  tags = merge(var.tags, { Name = "sbap01-sonarqube-3389" })
+}
