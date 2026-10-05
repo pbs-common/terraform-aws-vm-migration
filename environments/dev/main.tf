@@ -78,3 +78,70 @@ import {
   to = aws_instance.s_emts03_dat1_w
   id = "i-04cf9c488ce8c1a1e"
 }
+
+resource "aws_security_group" "sbap01_sonarqube" {
+  name_prefix = "sbap01-sonarqube-"
+  description = "Dedicated SG for s-sbap01-dat1-x (SonarQube) application access"
+  vpc_id      = "vpc-00f9a248160c17a5f"
+
+  tags = merge(var.tags, { Name = "sbap01-sonarqube-sg" })
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_9000" {
+  security_group_id = aws_security_group.sbap01_sonarqube.id
+  description       = "SonarQube web UI, on-prem"
+  from_port         = 9000
+  to_port           = 9000
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "10.164.0.0/16"
+
+  tags = merge(var.tags, { Name = "sbap01-sonarqube-9000" })
+}
+
+resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_9000_aws" {
+  security_group_id = aws_security_group.sbap01_sonarqube.id
+  description       = "SonarQube web UI, ghsd04 CI runner"
+  from_port         = 9000
+  to_port           = 9000
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "10.202.0.0/16"
+
+  tags = merge(var.tags, { Name = "sbap01-sonarqube-9000-aws" })
+}
+
+resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_22" {
+  security_group_id = aws_security_group.sbap01_sonarqube.id
+  description       = "SSH"
+  from_port         = 22
+  to_port           = 22
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "10.164.0.0/16"
+
+  tags = merge(var.tags, { Name = "sbap01-sonarqube-22" })
+}
+
+resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_443" {
+  security_group_id = aws_security_group.sbap01_sonarqube.id
+  description       = "HTTPS"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "10.164.0.0/16"
+
+  tags = merge(var.tags, { Name = "sbap01-sonarqube-443" })
+}
+
+resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_3389" {
+  security_group_id = aws_security_group.sbap01_sonarqube.id
+  description       = "RDP"
+  from_port         = 3389
+  to_port           = 3389
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "10.164.0.0/16"
+
+  tags = merge(var.tags, { Name = "sbap01-sonarqube-3389" })
+}
