@@ -81,7 +81,7 @@ import {
 
 resource "aws_instance" "s_emts02_dat1_w" {
   ami           = "ami-0d16ebbf0d8306d63"
-  instance_type = "m5.large"
+  instance_type = "m5.xlarge"
   tags = {
     "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
     "AWSApplicationMigrationServiceSourceServerID" = "s-380f2ab3953df257f"
