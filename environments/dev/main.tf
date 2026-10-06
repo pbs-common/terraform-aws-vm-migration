@@ -79,6 +79,38 @@ import {
   id = "i-04cf9c488ce8c1a1e"
 }
 
+resource "aws_instance" "s_emts02_dat1_w" {
+  ami           = "ami-0d16ebbf0d8306d63"
+  instance_type = "m5.large"
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-380f2ab3953df257f"
+    "Name"                                         = "s-emts02-dat1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-3445bec7fcedf243d"
+    "mgn.amazonaws.com-source-server"              = "s-380f2ab3953df257f"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Poonam-Singh"
+    "pbs:billing:product"                          = "Ready-API"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-380f2ab3953df257f"
+    "Name"                                         = "s-emts02-dat1-w"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-3445bec7fcedf243d"
+    "mgn.amazonaws.com-source-server"              = "s-380f2ab3953df257f"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Poonam-Singh"
+    "pbs:billing:product"                          = "Ready-API"
+  }
+}
+
+import {
+  to = aws_instance.s_emts02_dat1_w
+  id = "i-0334e1242e1ceff4e"
+}
+
 resource "aws_security_group" "sbap01_sonarqube" {
   name_prefix = "sbap01-sonarqube-"
   description = "Dedicated SG for s-sbap01-dat1-x (SonarQube) application access"
