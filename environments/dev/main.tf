@@ -145,3 +145,39 @@ resource "aws_vpc_security_group_ingress_rule" "sbap01_sonarqube_3389" {
 
   tags = merge(var.tags, { Name = "sbap01-sonarqube-3389" })
 }
+
+resource "aws_instance" "s_sbap01_dat1_x" {
+  ami           = "ami-0447a785619664547"
+  instance_type = "r5.large"
+  vpc_security_group_ids = [
+    aws_security_group.sbap01_sonarqube.id,
+    "sg-01088e3be56d47a72",
+  ]
+  tags = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-306129d7833208c43"
+    "Name"                                         = "s-sbap01-dat1-x"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-39405a010ca796545"
+    "mgn.amazonaws.com-source-server"              = "s-306129d7833208c43"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "SnoarQube"
+  }
+  tags_all = {
+    "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
+    "AWSApplicationMigrationServiceSourceServerID" = "s-306129d7833208c43"
+    "Name"                                         = "s-sbap01-dat1-x"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-39405a010ca796545"
+    "mgn.amazonaws.com-source-server"              = "s-306129d7833208c43"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "SnoarQube"
+  }
+}
+
+import {
+  to = aws_instance.s_sbap01_dat1_x
+  id = "i-04bc18689d5d8a9c5"
+}
