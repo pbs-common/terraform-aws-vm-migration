@@ -156,24 +156,24 @@ resource "aws_instance" "s_sbap01_dat1_x" {
   tags = {
     "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
     "AWSApplicationMigrationServiceSourceServerID" = "s-306129d7833208c43"
-    "Name"                                          = "s-sbap01-dat1-x"
-    "map-migrated"                                  = "mig5T578AWUOW"
-    "mgn.amazonaws.com-job"                         = "mgnjob-39405a010ca796545"
-    "mgn.amazonaws.com-source-server"               = "s-306129d7833208c43"
-    "pbs:billing:environment"                       = "Dev"
-    "pbs:billing:owner"                             = "Murali-Rajendran"
-    "pbs:billing:product"                           = "SnoarQube"
+    "Name"                                         = "s-sbap01-dat1-x"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-39405a010ca796545"
+    "mgn.amazonaws.com-source-server"              = "s-306129d7833208c43"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "SnoarQube"
   }
   tags_all = {
     "AWSApplicationMigrationServiceManaged"        = "mgn.amazonaws.com"
     "AWSApplicationMigrationServiceSourceServerID" = "s-306129d7833208c43"
-    "Name"                                          = "s-sbap01-dat1-x"
-    "map-migrated"                                  = "mig5T578AWUOW"
-    "mgn.amazonaws.com-job"                         = "mgnjob-39405a010ca796545"
-    "mgn.amazonaws.com-source-server"               = "s-306129d7833208c43"
-    "pbs:billing:environment"                       = "Dev"
-    "pbs:billing:owner"                             = "Murali-Rajendran"
-    "pbs:billing:product"                           = "SnoarQube"
+    "Name"                                         = "s-sbap01-dat1-x"
+    "map-migrated"                                 = "mig5T578AWUOW"
+    "mgn.amazonaws.com-job"                        = "mgnjob-39405a010ca796545"
+    "mgn.amazonaws.com-source-server"              = "s-306129d7833208c43"
+    "pbs:billing:environment"                      = "Dev"
+    "pbs:billing:owner"                            = "Murali-Rajendran"
+    "pbs:billing:product"                          = "SnoarQube"
   }
 }
 
