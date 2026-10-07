@@ -42,6 +42,18 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
+module "cloudwatch_alerts" {
+  source = "../../modules/cloudwatch-alerts"
+
+  name = "staging"
+
+  notification_channels = var.cloudwatch_alerts_notification_channels
+
+  alarms = var.cloudwatch_alerts_alarms
+
+  tags = var.tags
+}
+
 resource "aws_instance" "esb_rtm01_qa" {
   ami           = "ami-09722327218b378f6"
   instance_type = "m5.large"

@@ -1,5 +1,83 @@
 aws_region = "us-east-1"
 
+# CloudWatch alerts: ad is PROD tier. Two channels: routine (email, disk at 8%
+# free) and critical (email, Slack, PagerDuty, for ping/service down and disk at 4%/0%
+# free). Slack webhook secret is live, PagerDuty key pending.
+cloudwatch_alerts_notification_channels = {
+  routine = {
+    email_subscriptions = ["winopsdl@pbs.org"]
+  }
+  critical = {
+    email_subscriptions      = ["winopsdl@pbs.org"]
+    slack_webhook_secret_arn = "arn:aws:secretsmanager:us-east-1:064271145854:secret:ad-cloudwatch-alerts-slack-webhook-qS2EWR"
+    # pagerduty_integration_key pending
+  }
+}
+
+# dc1/dc2 disk alarms. Windows: LogicalDisk % Free Space, alarm low.
+cloudwatch_alerts_alarms = [
+  {
+    name                 = "dc1-disk-free-8"
+    namespace            = "CWAgent"
+    metric_name          = "LogicalDisk % Free Space"
+    dimensions           = { InstanceId = "i-0c3f94aab892dc2aa", instance = "C:", objectname = "LogicalDisk" }
+    statistic            = "Minimum"
+    threshold            = 8
+    comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  {
+    name                 = "dc1-disk-free-4"
+    namespace            = "CWAgent"
+    metric_name          = "LogicalDisk % Free Space"
+    dimensions           = { InstanceId = "i-0c3f94aab892dc2aa", instance = "C:", objectname = "LogicalDisk" }
+    statistic            = "Minimum"
+    threshold            = 4
+    comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "critical"
+  },
+  {
+    name                 = "dc1-disk-free-0"
+    namespace            = "CWAgent"
+    metric_name          = "LogicalDisk % Free Space"
+    dimensions           = { InstanceId = "i-0c3f94aab892dc2aa", instance = "C:", objectname = "LogicalDisk" }
+    statistic            = "Minimum"
+    threshold            = 0
+    comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "critical"
+  },
+  {
+    name                 = "dc2-disk-free-8"
+    namespace            = "CWAgent"
+    metric_name          = "LogicalDisk % Free Space"
+    dimensions           = { InstanceId = "i-092b297b4d11cdb21", instance = "C:", objectname = "LogicalDisk" }
+    statistic            = "Minimum"
+    threshold            = 8
+    comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  {
+    name                 = "dc2-disk-free-4"
+    namespace            = "CWAgent"
+    metric_name          = "LogicalDisk % Free Space"
+    dimensions           = { InstanceId = "i-092b297b4d11cdb21", instance = "C:", objectname = "LogicalDisk" }
+    statistic            = "Minimum"
+    threshold            = 4
+    comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "critical"
+  },
+  {
+    name                 = "dc2-disk-free-0"
+    namespace            = "CWAgent"
+    metric_name          = "LogicalDisk % Free Space"
+    dimensions           = { InstanceId = "i-092b297b4d11cdb21", instance = "C:", objectname = "LogicalDisk" }
+    statistic            = "Minimum"
+    threshold            = 0
+    comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "critical"
+  },
+]
+
 # Golden AMI: AD-DS/DNS installed, not promoted, sysprepped. Built manually.
 golden_ami_id = "ami-038905f9eb15c1313"
 

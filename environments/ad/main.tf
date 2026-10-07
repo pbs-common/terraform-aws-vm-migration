@@ -247,3 +247,14 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
+module "cloudwatch_alerts" {
+  source = "../../modules/cloudwatch-alerts"
+
+  name = "ad"
+
+  notification_channels = var.cloudwatch_alerts_notification_channels
+
+  alarms = var.cloudwatch_alerts_alarms
+
+  tags = var.tags
+}

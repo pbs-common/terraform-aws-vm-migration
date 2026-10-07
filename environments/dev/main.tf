@@ -42,6 +42,18 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
+module "cloudwatch_alerts" {
+  source = "../../modules/cloudwatch-alerts"
+
+  name = "dev"
+
+  notification_channels = var.cloudwatch_alerts_notification_channels
+
+  alarms = var.cloudwatch_alerts_alarms
+
+  tags = var.tags
+}
+
 resource "aws_instance" "s_emts01_dat1_w" {
   ami           = "ami-0f534974106934085"
   instance_type = "m5.2xlarge"

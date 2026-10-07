@@ -14,6 +14,9 @@ terraform.rc
 tfplan
 plan_output.txt
 
+## Lambda build artifacts (zipped by the archive provider at plan/apply time)
+modules/cloudwatch-alerts/.build/
+
 ## Python (the CI coverage checker in .github/scripts and its self-test)
 __pycache__/
 *.py[cod]

@@ -47,6 +47,17 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
+module "cloudwatch_alerts" {
+  source = "../../modules/cloudwatch-alerts"
+
+  name = "workspaces"
+
+  notification_channels = var.cloudwatch_alerts_notification_channels
+
+  alarms = var.cloudwatch_alerts_alarms
+
+  tags = var.tags
+}
 # Migrated instances from MGN
 resource "aws_instance" "i_ng_ws_zc_t1_l" {
   ami           = "ami-0b84981f84c45e189"
