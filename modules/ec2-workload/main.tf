@@ -173,6 +173,13 @@ resource "aws_iam_role_policy_attachment" "additional" {
   policy_arn = each.value
 }
 
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
+  count = var.create_iam_instance_profile && var.enable_cloudwatch_agent ? 1 : 0
+
+  role       = aws_iam_role.this[0].name
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
 resource "aws_iam_instance_profile" "this" {
   count = var.create_iam_instance_profile ? 1 : 0
 
@@ -223,4 +230,28 @@ resource "aws_instance" "this" {
   lifecycle {
     ignore_changes = [ami]
   }
+}
+
+# Targets this instance directly by ID, not a tag, so any instance created
+# through this module is covered automatically, not just MGN-migrated ones.
+resource "aws_ssm_association" "cloudwatch_agent" {
+  count = var.enable_cloudwatch_agent ? 1 : 0
+
+  name = "AWSQuickSetupType-InstallAndManageCloudWatchAgent"
+
+  targets {
+    key    = "InstanceIds"
+    values = [aws_instance.this.id]
+  }
+
+  parameters = {
+    isInstall                     = "true"
+    isConfigure                   = "true"
+    optionalConfigurationSource   = "default"
+    optionalConfigurationLocation = ""
+  }
+
+  tags = local.tags
+
+  depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }

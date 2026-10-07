@@ -15,6 +15,38 @@ module "backup" {
   tags = var.tags
 }
 
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
+  for_each = toset([
+    "AWSApplicationMigrationLaunchInstanceWithSsmRole",
+    "AmazonSSMRoleForInstancesQuickSetup",
+  ])
+
+  role       = each.value
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+# Covers instances adopted from MGN via import, which never call ec2-workload
+# and so never get its per-instance association.
+resource "aws_ssm_association" "cloudwatch_agent" {
+  name = "AWSQuickSetupType-InstallAndManageCloudWatchAgent"
+
+  targets {
+    key    = "tag-key"
+    values = ["AWSApplicationMigrationServiceSourceServerID"]
+  }
+
+  parameters = {
+    isInstall                     = "true"
+    isConfigure                   = "true"
+    optionalConfigurationSource   = "default"
+    optionalConfigurationLocation = ""
+  }
+
+  tags = var.tags
+
+  depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
+}
+
 # Migrated instances from MGN
 resource "aws_instance" "i_ng_ws_zc_t1_l" {
   ami           = "ami-0b84981f84c45e189"
