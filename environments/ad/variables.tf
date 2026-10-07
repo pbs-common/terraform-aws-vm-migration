@@ -114,11 +114,11 @@ variable "windows_vss" {
 variable "cloudwatch_alerts_notification_channels" {
   description = "Notification channels for ad CloudWatch alerts, like \"routine\" or \"critical\". See modules/cloudwatch-alerts/variables.tf for the object shape."
   type = map(object({
-    email_subscriptions       = optional(list(string), [])
-    sms_subscriptions         = optional(list(string), [])
-    slack_webhook_secret_arn  = optional(string)
-    teams_webhook_secret_arn  = optional(string)
-    pagerduty_integration_key = optional(string)
+    email_subscriptions                  = optional(list(string), [])
+    sms_subscriptions                    = optional(list(string), [])
+    slack_webhook_secret_arn             = optional(string)
+    teams_webhook_secret_arn             = optional(string)
+    pagerduty_integration_key_secret_arn = optional(string)
   }))
   default = {}
 }

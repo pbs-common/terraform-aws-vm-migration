@@ -24,18 +24,22 @@ variable "notification_channels" {
                                    1Password). The Lambda forwarder reads it at invoke
                                    time, so the URL never touches Terraform state.
       teams_webhook_secret_arn  - same, for a Microsoft Teams webhook.
-      pagerduty_integration_key - PagerDuty integration key. Subscribes PagerDuty's
-                                   endpoint directly over HTTPS, no Lambda, it
-                                   auto-confirms. This one does land in state, since
-                                   it's part of the endpoint URL, so pass it via a
-                                   TF_VAR env var.
+      pagerduty_integration_key_secret_arn - ARN of a Secrets Manager secret holding
+                                   the PagerDuty integration key. Read at plan time
+                                   (not by a Lambda, unlike the webhooks above) since
+                                   it has to be embedded directly in the SNS
+                                   subscription's endpoint URL. That means, unlike the
+                                   webhook secrets, the key value does end up in
+                                   Terraform state either way. Subscribes PagerDuty's
+                                   endpoint directly over HTTPS, no Lambda needed, it
+                                   auto-confirms.
   EOT
   type = map(object({
-    email_subscriptions       = optional(list(string), [])
-    sms_subscriptions         = optional(list(string), [])
-    slack_webhook_secret_arn  = optional(string)
-    teams_webhook_secret_arn  = optional(string)
-    pagerduty_integration_key = optional(string)
+    email_subscriptions                  = optional(list(string), [])
+    sms_subscriptions                    = optional(list(string), [])
+    slack_webhook_secret_arn             = optional(string)
+    teams_webhook_secret_arn             = optional(string)
+    pagerduty_integration_key_secret_arn = optional(string)
   }))
   default = {}
 }

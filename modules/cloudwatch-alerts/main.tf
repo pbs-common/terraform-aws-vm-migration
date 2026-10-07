@@ -25,10 +25,16 @@ locals {
 
   pagerduty_channels = {
     for key, channel in var.notification_channels : key => channel
-    if channel.pagerduty_integration_key != null
+    if channel.pagerduty_integration_key_secret_arn != null
   }
 
   alarms_by_name = { for a in var.alarms : a.name => a }
+}
+
+data "aws_secretsmanager_secret_version" "pagerduty" {
+  for_each = local.pagerduty_channels
+
+  secret_id = each.value.pagerduty_integration_key_secret_arn
 }
 
 resource "aws_sns_topic" "this" {
@@ -62,7 +68,7 @@ resource "aws_sns_topic_subscription" "pagerduty" {
 
   topic_arn              = aws_sns_topic.this[each.key].arn
   protocol               = "https"
-  endpoint               = "https://events.pagerduty.com/integration/${each.value.pagerduty_integration_key}/enqueue"
+  endpoint               = "https://events.pagerduty.com/integration/${data.aws_secretsmanager_secret_version.pagerduty[each.key].secret_string}/enqueue"
   endpoint_auto_confirms = true
 }
 

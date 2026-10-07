@@ -2,19 +2,51 @@ aws_region = "us-east-1"
 
 # CloudWatch alerts: staging is PROD tier. Two channels: routine (email, disk at 8%
 # free) and critical (email, Slack, PagerDuty, for ping/service down and disk at 4%/0%
-# free). Slack webhook secret is live, PagerDuty key pending.
+# free). Slack webhook secret and PagerDuty key are both live.
 cloudwatch_alerts_notification_channels = {
   routine = {
     email_subscriptions = ["winopsdl@pbs.org"]
   }
   critical = {
-    email_subscriptions      = ["winopsdl@pbs.org"]
-    slack_webhook_secret_arn = "arn:aws:secretsmanager:us-east-1:395747404294:secret:staging-cloudwatch-alerts-slack-webhook-aifTEe"
-    # pagerduty_integration_key pending
+    email_subscriptions                  = ["winopsdl@pbs.org"]
+    slack_webhook_secret_arn             = "arn:aws:secretsmanager:us-east-1:395747404294:secret:staging-cloudwatch-alerts-slack-webhook-aifTEe"
+    pagerduty_integration_key_secret_arn = "arn:aws:secretsmanager:us-east-1:395747404294:secret:staging-cloudwatch-alerts-pagerduty-key-r8kQh6"
   }
 }
 
-# Alarms stay empty until there's a disk alarm written for pbsd-budget-uat.
+# esb-rtm01-qa disk alarms. Linux: disk_used_percent, alarm high.
+cloudwatch_alerts_alarms = [
+  {
+    name                 = "esb-rtm01-qa-disk-free-8"
+    namespace            = "CWAgent"
+    metric_name          = "disk_used_percent"
+    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/" }
+    statistic            = "Maximum"
+    threshold            = 92
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  {
+    name                 = "esb-rtm01-qa-disk-free-4"
+    namespace            = "CWAgent"
+    metric_name          = "disk_used_percent"
+    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/" }
+    statistic            = "Maximum"
+    threshold            = 96
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
+    notification_channel = "critical"
+  },
+  {
+    name                 = "esb-rtm01-qa-disk-free-0"
+    namespace            = "CWAgent"
+    metric_name          = "disk_used_percent"
+    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/" }
+    statistic            = "Maximum"
+    threshold            = 100
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
+    notification_channel = "critical"
+  },
+]
 
 tags = {
   "map-migrated"            = "mig5T578AWUOW"

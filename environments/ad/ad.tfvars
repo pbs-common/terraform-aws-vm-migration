@@ -2,15 +2,15 @@ aws_region = "us-east-1"
 
 # CloudWatch alerts: ad is PROD tier. Two channels: routine (email, disk at 8%
 # free) and critical (email, Slack, PagerDuty, for ping/service down and disk at 4%/0%
-# free). Slack webhook secret is live, PagerDuty key pending.
+# free). Slack webhook secret and PagerDuty key are both live.
 cloudwatch_alerts_notification_channels = {
   routine = {
     email_subscriptions = ["winopsdl@pbs.org"]
   }
   critical = {
-    email_subscriptions      = ["winopsdl@pbs.org"]
-    slack_webhook_secret_arn = "arn:aws:secretsmanager:us-east-1:064271145854:secret:ad-cloudwatch-alerts-slack-webhook-qS2EWR"
-    # pagerduty_integration_key pending
+    email_subscriptions                  = ["winopsdl@pbs.org"]
+    slack_webhook_secret_arn             = "arn:aws:secretsmanager:us-east-1:064271145854:secret:ad-cloudwatch-alerts-slack-webhook-qS2EWR"
+    pagerduty_integration_key_secret_arn = "arn:aws:secretsmanager:us-east-1:064271145854:secret:ad-cloudwatch-alerts-pagerduty-key-aPOB6R"
   }
 }
 
