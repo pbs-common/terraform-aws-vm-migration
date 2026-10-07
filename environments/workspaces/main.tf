@@ -334,3 +334,33 @@ import {
   to = aws_instance.s_si_d1_t1_w
   id = "i-00c1e14ce9114b57c"
 }
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
+  for_each = toset([
+    "AWSApplicationMigrationLaunchInstanceWithSsmRole",
+    "AmazonSSMRoleForInstancesQuickSetup",
+  ])
+
+  role       = each.value
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_ssm_association" "cloudwatch_agent" {
+  name = "AWSQuickSetupType-InstallAndManageCloudWatchAgent"
+
+  targets {
+    key    = "tag-key"
+    values = ["AWSApplicationMigrationServiceSourceServerID"]
+  }
+
+  parameters = {
+    isInstall                     = "true"
+    isConfigure                   = "true"
+    optionalConfigurationSource   = "default"
+    optionalConfigurationLocation = ""
+  }
+
+  tags = var.tags
+
+  depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
+}

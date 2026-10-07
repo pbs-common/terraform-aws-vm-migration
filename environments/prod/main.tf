@@ -46,3 +46,28 @@ import {
   to = aws_instance.i_amsi01_pat1_w
   id = "i-0562129d8614d2825"
 }
+
+resource "aws_iam_role_policy_attachment" "cloudwatch_agent" {
+  role       = "AWSApplicationMigrationLaunchInstanceWithSsmRole"
+  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+}
+
+resource "aws_ssm_association" "cloudwatch_agent" {
+  name = "AWSQuickSetupType-InstallAndManageCloudWatchAgent"
+
+  targets {
+    key    = "tag-key"
+    values = ["AWSApplicationMigrationServiceSourceServerID"]
+  }
+
+  parameters = {
+    isInstall                     = "true"
+    isConfigure                   = "true"
+    optionalConfigurationSource   = "default"
+    optionalConfigurationLocation = ""
+  }
+
+  tags = var.tags
+
+  depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
+}
