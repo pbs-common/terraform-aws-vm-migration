@@ -232,6 +232,8 @@ resource "aws_instance" "this" {
   }
 }
 
+# Targets this instance directly by ID, not a tag, so any instance created
+# through this module is covered automatically, not just MGN-migrated ones.
 resource "aws_ssm_association" "cloudwatch_agent" {
   count = var.enable_cloudwatch_agent ? 1 : 0
 
