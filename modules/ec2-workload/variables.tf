@@ -136,6 +136,12 @@ variable "additional_iam_policy_arns" {
   default     = []
 }
 
+variable "enable_cloudwatch_agent" {
+  description = "Whether to install and configure the CloudWatch Agent on this instance via SSM."
+  type        = bool
+  default     = true
+}
+
 # Storage
 
 variable "root_volume_size" {
