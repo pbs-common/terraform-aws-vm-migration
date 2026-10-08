@@ -68,6 +68,10 @@ module "cloudwatch_alerts" {
 
   alarms = local.cloudwatch_alerts_alarms
 
+  # Initial rollout: let alarms settle into real state without notifying.
+  # Flip to true once verified via the API that nothing is stuck in ALARM.
+  actions_enabled = false
+
   tags = var.tags
 }
 

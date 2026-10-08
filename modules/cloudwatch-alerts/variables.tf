@@ -87,6 +87,12 @@ variable "alarms" {
   }
 }
 
+variable "actions_enabled" {
+  description = "Whether alarms notify on state change. Set false for an initial rollout so alarms settle into real state without firing, then flip to true once verified."
+  type        = bool
+  default     = true
+}
+
 variable "tags" {
   description = "Tags applied to resources, merged with an automatic Name tag."
   type        = map(string)

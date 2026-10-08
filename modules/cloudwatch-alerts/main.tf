@@ -198,6 +198,7 @@ resource "aws_cloudwatch_metric_alarm" "this" {
   comparison_operator = each.value.comparison_operator
   dimensions          = each.value.dimensions
   treat_missing_data  = each.value.treat_missing_data
+  actions_enabled     = var.actions_enabled
 
   alarm_actions = [aws_sns_topic.this[each.value.notification_channel].arn]
   ok_actions    = each.value.notify_ok ? [aws_sns_topic.this[each.value.notification_channel].arn] : []
