@@ -618,7 +618,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "ghsd01-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-062c6c56e0ea43a52" }
     period               = 300
     evaluation_periods   = 1
@@ -629,7 +629,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "sits01-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-0f15f3836d730abb6" }
     period               = 300
     evaluation_periods   = 1
@@ -640,7 +640,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "esdev10-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-0745c6a50a22b3970" }
     period               = 300
     evaluation_periods   = 1
@@ -651,7 +651,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "ngws-kt-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-05358ac8ae6ae3398" }
     period               = 300
     evaluation_periods   = 1
@@ -662,7 +662,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "esdev-brian-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-0e71029bbc740a4b2" }
     period               = 300
     evaluation_periods   = 1
@@ -673,7 +673,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "ngws-sm-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-03cd76dd517b2efb6" }
     period               = 300
     evaluation_periods   = 1
@@ -684,7 +684,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "ngws-bb-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-037e76172f90efc2d" }
     period               = 300
     evaluation_periods   = 1
@@ -695,7 +695,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "ngws-zc-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-03d447ddfcf97efe7" }
     period               = 300
     evaluation_periods   = 1
@@ -706,7 +706,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "ghsd04-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-031ddd298cf491c67" }
     period               = 300
     evaluation_periods   = 1
@@ -717,7 +717,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "ngws-mr-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-0882b12d32667c7ee" }
     period               = 300
     evaluation_periods   = 1
@@ -728,7 +728,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "ngws-ld-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-069a3f4cdaec8c82a" }
     period               = 300
     evaluation_periods   = 1
@@ -739,7 +739,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "esdev12-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-078edb8241c6df4f2" }
     period               = 300
     evaluation_periods   = 1
@@ -750,7 +750,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "esdev08-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-0c2fd56636c99ff1d" }
     period               = 300
     evaluation_periods   = 1
@@ -761,7 +761,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "sid1-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-00c1e14ce9114b57c" }
     period               = 300
     evaluation_periods   = 1
@@ -772,7 +772,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "esdev-chex-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-02913429a0e270b18" }
     period               = 300
     evaluation_periods   = 1
@@ -783,7 +783,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "devops-app1-dev-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-0d9ab8addd6e1a4db" }
     period               = 300
     evaluation_periods   = 1

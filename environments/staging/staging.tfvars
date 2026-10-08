@@ -81,7 +81,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "esb-rtm01-qa-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-05daff18817bf6938" }
     period               = 300
     evaluation_periods   = 1

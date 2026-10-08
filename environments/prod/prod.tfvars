@@ -51,7 +51,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "amsi01-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-0562129d8614d2825" }
     period               = 300
     evaluation_periods   = 1

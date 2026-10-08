@@ -196,7 +196,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "sbap01-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-04bc18689d5d8a9c5" }
     period               = 300
     evaluation_periods   = 1
@@ -207,7 +207,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "emts01-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c" }
     period               = 300
     evaluation_periods   = 1
@@ -218,7 +218,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "emts02-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-0334e1242e1ceff4e" }
     period               = 300
     evaluation_periods   = 1
@@ -229,7 +229,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "emts03-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-04cf9c488ce8c1a1e" }
     period               = 300
     evaluation_periods   = 1

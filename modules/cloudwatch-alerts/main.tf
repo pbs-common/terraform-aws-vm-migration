@@ -136,11 +136,13 @@ resource "aws_cloudwatch_log_group" "webhook_forwarder" {
 resource "aws_lambda_function" "webhook_forwarder" {
   for_each = local.channels_with_webhook
 
-  function_name    = "${var.name}-${each.key}-webhook-forwarder"
-  role             = aws_iam_role.webhook_forwarder[each.key].arn
-  handler          = "webhook_forwarder.handler"
-  runtime          = "python3.13"
-  timeout          = 10
+  function_name = "${var.name}-${each.key}-webhook-forwarder"
+  role          = aws_iam_role.webhook_forwarder[each.key].arn
+  handler       = "webhook_forwarder.handler"
+  runtime       = "python3.13"
+  # Slack and Teams post sequentially, 5s each - 10s leaves no room for secrets
+  # fetch, cold start, or a multi-record batch.
+  timeout          = 30
   filename         = data.archive_file.webhook_forwarder.output_path
   source_code_hash = data.archive_file.webhook_forwarder.output_base64sha256
 

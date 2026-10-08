@@ -50,7 +50,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "dc1-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-0c3f94aab892dc2aa" }
     period               = 300
     evaluation_periods   = 1
@@ -91,7 +91,7 @@ cloudwatch_alerts_alarms = [
   {
     name                 = "dc2-unreachable"
     namespace            = "AWS/EC2"
-    metric_name          = "StatusCheckFailed_System"
+    metric_name          = "StatusCheckFailed"
     dimensions           = { InstanceId = "i-092b297b4d11cdb21" }
     period               = 300
     evaluation_periods   = 1

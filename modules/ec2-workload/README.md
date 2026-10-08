@@ -72,6 +72,7 @@ Each rule in `ingress_rules`/`egress_rules` sets `cidr_blocks`, `prefix_list_ids
 | private_ip | Private IP address of the instance |
 | public_ip | Public IP address of the instance, if associated |
 | ami_id | AMI ID the instance was launched from |
+| instance_type | Instance type the instance is running as |
 | security_group_id | ID of the security group this module created, if any |
 | iam_role_arn | ARN of the IAM role this module created, if any |
 | iam_instance_profile_name | Name of the IAM instance profile attached to the instance |
