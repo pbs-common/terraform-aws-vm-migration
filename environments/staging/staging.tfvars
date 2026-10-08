@@ -20,7 +20,7 @@ cloudwatch_alerts_alarms = [
     name                 = "esb-rtm01-qa-disk-free-8"
     namespace            = "CWAgent"
     metric_name          = "disk_used_percent"
-    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/", ImageId = "ami-09722327218b378f6", InstanceType = "m5.large", device = "mapper/rhel-root", fstype = "xfs" }
+    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/", device = "mapper/rhel-root", fstype = "xfs" }
     statistic            = "Maximum"
     threshold            = 92
     comparison_operator  = "GreaterThanOrEqualToThreshold"
@@ -30,7 +30,7 @@ cloudwatch_alerts_alarms = [
     name                 = "esb-rtm01-qa-disk-free-4"
     namespace            = "CWAgent"
     metric_name          = "disk_used_percent"
-    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/", ImageId = "ami-09722327218b378f6", InstanceType = "m5.large", device = "mapper/rhel-root", fstype = "xfs" }
+    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/", device = "mapper/rhel-root", fstype = "xfs" }
     statistic            = "Maximum"
     threshold            = 96
     comparison_operator  = "GreaterThanOrEqualToThreshold"
@@ -40,7 +40,7 @@ cloudwatch_alerts_alarms = [
     name                 = "esb-rtm01-qa-disk-free-0"
     namespace            = "CWAgent"
     metric_name          = "disk_used_percent"
-    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/", ImageId = "ami-09722327218b378f6", InstanceType = "m5.large", device = "mapper/rhel-root", fstype = "xfs" }
+    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/", device = "mapper/rhel-root", fstype = "xfs" }
     statistic            = "Maximum"
     threshold            = 100
     comparison_operator  = "GreaterThanOrEqualToThreshold"
@@ -51,7 +51,7 @@ cloudwatch_alerts_alarms = [
     name                 = "esb-rtm01-qa-home-disk-free-8"
     namespace            = "CWAgent"
     metric_name          = "disk_used_percent"
-    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/home", ImageId = "ami-09722327218b378f6", InstanceType = "m5.large", device = "mapper/rhel-home", fstype = "xfs" }
+    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/home", device = "mapper/rhel-home", fstype = "xfs" }
     statistic            = "Maximum"
     threshold            = 92
     comparison_operator  = "GreaterThanOrEqualToThreshold"
@@ -61,7 +61,7 @@ cloudwatch_alerts_alarms = [
     name                 = "esb-rtm01-qa-home-disk-free-4"
     namespace            = "CWAgent"
     metric_name          = "disk_used_percent"
-    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/home", ImageId = "ami-09722327218b378f6", InstanceType = "m5.large", device = "mapper/rhel-home", fstype = "xfs" }
+    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/home", device = "mapper/rhel-home", fstype = "xfs" }
     statistic            = "Maximum"
     threshold            = 96
     comparison_operator  = "GreaterThanOrEqualToThreshold"
@@ -71,7 +71,7 @@ cloudwatch_alerts_alarms = [
     name                 = "esb-rtm01-qa-home-disk-free-0"
     namespace            = "CWAgent"
     metric_name          = "disk_used_percent"
-    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/home", ImageId = "ami-09722327218b378f6", InstanceType = "m5.large", device = "mapper/rhel-home", fstype = "xfs" }
+    dimensions           = { InstanceId = "i-05daff18817bf6938", path = "/home", device = "mapper/rhel-home", fstype = "xfs" }
     statistic            = "Maximum"
     threshold            = 100
     comparison_operator  = "GreaterThanOrEqualToThreshold"

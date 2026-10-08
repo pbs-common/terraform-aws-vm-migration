@@ -45,7 +45,7 @@ variable "notification_channels" {
 }
 
 variable "sns_kms_key_arn" {
-  description = "KMS key ARN to encrypt each SNS topic at rest. Null uses the AWS-managed alias/aws/sns key."
+  description = "KMS key ARN to encrypt each SNS topic at rest. Null leaves it unencrypted -- alias/aws/sns blocks CloudWatch Alarms from publishing here, so a customer-managed key with that permission granted is required to turn encryption on."
   type        = string
   default     = null
 }

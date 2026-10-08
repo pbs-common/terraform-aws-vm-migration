@@ -19,6 +19,11 @@ output "ami_id" {
   sensitive   = true
 }
 
+output "instance_type" {
+  description = "Instance type the instance is running as."
+  value       = aws_instance.this.instance_type
+}
+
 output "security_group_id" {
   description = "ID of the security group created by this module, if any."
   value       = var.create_security_group ? aws_security_group.this[0].id : null

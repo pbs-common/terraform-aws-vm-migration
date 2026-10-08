@@ -21,7 +21,7 @@ cloudwatch_alerts_alarms = [
     name                 = "dc1-disk-free-8"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0c3f94aab892dc2aa", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-038905f9eb15c1313", InstanceType = "t3.large" }
+    dimensions           = { InstanceId = "i-0c3f94aab892dc2aa", instance = "C:", objectname = "LogicalDisk" }
     statistic            = "Minimum"
     threshold            = 8
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -31,7 +31,7 @@ cloudwatch_alerts_alarms = [
     name                 = "dc1-disk-free-4"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0c3f94aab892dc2aa", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-038905f9eb15c1313", InstanceType = "t3.large" }
+    dimensions           = { InstanceId = "i-0c3f94aab892dc2aa", instance = "C:", objectname = "LogicalDisk" }
     statistic            = "Minimum"
     threshold            = 4
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -41,7 +41,7 @@ cloudwatch_alerts_alarms = [
     name                 = "dc1-disk-free-0"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0c3f94aab892dc2aa", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-038905f9eb15c1313", InstanceType = "t3.large" }
+    dimensions           = { InstanceId = "i-0c3f94aab892dc2aa", instance = "C:", objectname = "LogicalDisk" }
     statistic            = "Minimum"
     threshold            = 0
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -62,7 +62,7 @@ cloudwatch_alerts_alarms = [
     name                 = "dc2-disk-free-8"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-092b297b4d11cdb21", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-038905f9eb15c1313", InstanceType = "t3.large" }
+    dimensions           = { InstanceId = "i-092b297b4d11cdb21", instance = "C:", objectname = "LogicalDisk" }
     statistic            = "Minimum"
     threshold            = 8
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -72,7 +72,7 @@ cloudwatch_alerts_alarms = [
     name                 = "dc2-disk-free-4"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-092b297b4d11cdb21", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-038905f9eb15c1313", InstanceType = "t3.large" }
+    dimensions           = { InstanceId = "i-092b297b4d11cdb21", instance = "C:", objectname = "LogicalDisk" }
     statistic            = "Minimum"
     threshold            = 4
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -82,7 +82,7 @@ cloudwatch_alerts_alarms = [
     name                 = "dc2-disk-free-0"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-092b297b4d11cdb21", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-038905f9eb15c1313", InstanceType = "t3.large" }
+    dimensions           = { InstanceId = "i-092b297b4d11cdb21", instance = "C:", objectname = "LogicalDisk" }
     statistic            = "Minimum"
     threshold            = 0
     comparison_operator  = "LessThanOrEqualToThreshold"

@@ -247,6 +247,27 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
+locals {
+  # ami/instance_type per managed instance, merged into CWAgent alarm dimensions
+  # below so they can't go stale after a resize or replacement. ami comes out
+  # marked sensitive (ec2-workload's golden_ami_id lookup propagates that), so
+  # these alarms' dimensions show as "(sensitive value)" in plan output -
+  # harmless, just a plan-readability quirk, not a real secret.
+  instance_identity = {
+    "i-0c3f94aab892dc2aa" = { ami = module.dc1.ami_id, instance_type = module.dc1.instance_type }
+    "i-092b297b4d11cdb21" = { ami = module.dc2.ami_id, instance_type = module.dc2.instance_type }
+  }
+
+  cloudwatch_alerts_alarms = [
+    for alarm in var.cloudwatch_alerts_alarms : alarm.namespace == "CWAgent" ? merge(alarm, {
+      dimensions = merge(alarm.dimensions, {
+        ImageId      = local.instance_identity[alarm.dimensions.InstanceId].ami
+        InstanceType = local.instance_identity[alarm.dimensions.InstanceId].instance_type
+      })
+    }) : alarm
+  ]
+}
+
 module "cloudwatch_alerts" {
   source = "../../modules/cloudwatch-alerts"
 
@@ -254,7 +275,7 @@ module "cloudwatch_alerts" {
 
   notification_channels = var.cloudwatch_alerts_notification_channels
 
-  alarms = var.cloudwatch_alerts_alarms
+  alarms = local.cloudwatch_alerts_alarms
 
   tags = var.tags
 }

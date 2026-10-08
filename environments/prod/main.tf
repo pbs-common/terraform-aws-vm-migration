@@ -42,6 +42,23 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
+locals {
+  # ami/instance_type per managed instance, merged into CWAgent alarm dimensions
+  # below so they can't go stale after a resize or replacement.
+  instance_identity = {
+    "i-0562129d8614d2825" = { ami = aws_instance.i_amsi01_pat1_w.ami, instance_type = aws_instance.i_amsi01_pat1_w.instance_type }
+  }
+
+  cloudwatch_alerts_alarms = [
+    for alarm in var.cloudwatch_alerts_alarms : alarm.namespace == "CWAgent" ? merge(alarm, {
+      dimensions = merge(alarm.dimensions, {
+        ImageId      = local.instance_identity[alarm.dimensions.InstanceId].ami
+        InstanceType = local.instance_identity[alarm.dimensions.InstanceId].instance_type
+      })
+    }) : alarm
+  ]
+}
+
 module "cloudwatch_alerts" {
   source = "../../modules/cloudwatch-alerts"
 
@@ -49,7 +66,7 @@ module "cloudwatch_alerts" {
 
   notification_channels = var.cloudwatch_alerts_notification_channels
 
-  alarms = var.cloudwatch_alerts_alarms
+  alarms = local.cloudwatch_alerts_alarms
 
   tags = var.tags
 }

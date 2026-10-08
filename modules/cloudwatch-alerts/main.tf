@@ -40,8 +40,10 @@ data "aws_secretsmanager_secret_version" "pagerduty" {
 resource "aws_sns_topic" "this" {
   for_each = var.notification_channels
 
-  name              = "${var.name}-${each.key}-alerts"
-  kms_master_key_id = coalesce(var.sns_kms_key_arn, "alias/aws/sns")
+  name = "${var.name}-${each.key}-alerts"
+  # alias/aws/sns blocks CloudWatch Alarms from publishing here, confirmed directly.
+  # Leave unencrypted unless a customer-managed key grants that permission.
+  kms_master_key_id = var.sns_kms_key_arn
 
   tags = merge(var.tags, { Name = "${var.name}-${each.key}-alerts" })
 }
