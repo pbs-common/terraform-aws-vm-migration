@@ -64,7 +64,7 @@ variable "cloudwatch_alerts_notification_channels" {
 }
 
 variable "cloudwatch_alerts_alarms" {
-  description = "CloudWatch metric alarms for prod. See modules/cloudwatch-alerts/variables.tf for the object shape. Empty until real metrics are confirmed."
+  description = "CloudWatch metric alarms for prod. See modules/cloudwatch-alerts/variables.tf for the object shape."
   type = list(object({
     name                 = string
     description          = optional(string)

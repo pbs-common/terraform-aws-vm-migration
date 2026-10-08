@@ -21,7 +21,7 @@ cloudwatch_alerts_alarms = [
     name                 = "amsi01-disk-free-8"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0562129d8614d2825", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-0562129d8614d2825", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0d16ebbf0d8306d63", InstanceType = "m5.large" }
     statistic            = "Minimum"
     threshold            = 8
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -31,7 +31,7 @@ cloudwatch_alerts_alarms = [
     name                 = "amsi01-disk-free-4"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0562129d8614d2825", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-0562129d8614d2825", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0d16ebbf0d8306d63", InstanceType = "m5.large" }
     statistic            = "Minimum"
     threshold            = 4
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -41,10 +41,22 @@ cloudwatch_alerts_alarms = [
     name                 = "amsi01-disk-free-0"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0562129d8614d2825", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-0562129d8614d2825", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0d16ebbf0d8306d63", InstanceType = "m5.large" }
     statistic            = "Minimum"
     threshold            = 0
     comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "critical"
+  },
+  # Reachability (ping) alarm. EC2 status check, no agent needed.
+  {
+    name                 = "amsi01-unreachable"
+    namespace            = "AWS/EC2"
+    metric_name          = "StatusCheckFailed_System"
+    dimensions           = { InstanceId = "i-0562129d8614d2825" }
+    period               = 300
+    evaluation_periods   = 1
+    threshold            = 1
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
     notification_channel = "critical"
   },
 ]

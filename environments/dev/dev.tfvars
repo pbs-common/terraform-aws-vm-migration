@@ -14,7 +14,7 @@ cloudwatch_alerts_alarms = [
     name                 = "sbap01-disk-free-8"
     namespace            = "CWAgent"
     metric_name          = "disk_used_percent"
-    dimensions           = { InstanceId = "i-04bc18689d5d8a9c5", path = "/" }
+    dimensions           = { InstanceId = "i-04bc18689d5d8a9c5", path = "/", ImageId = "ami-0447a785619664547", InstanceType = "r5.large", device = "mapper/rhel-root", fstype = "xfs" }
     statistic            = "Maximum"
     threshold            = 92
     comparison_operator  = "GreaterThanOrEqualToThreshold"
@@ -24,7 +24,7 @@ cloudwatch_alerts_alarms = [
     name                 = "sbap01-disk-free-4"
     namespace            = "CWAgent"
     metric_name          = "disk_used_percent"
-    dimensions           = { InstanceId = "i-04bc18689d5d8a9c5", path = "/" }
+    dimensions           = { InstanceId = "i-04bc18689d5d8a9c5", path = "/", ImageId = "ami-0447a785619664547", InstanceType = "r5.large", device = "mapper/rhel-root", fstype = "xfs" }
     statistic            = "Maximum"
     threshold            = 96
     comparison_operator  = "GreaterThanOrEqualToThreshold"
@@ -34,7 +34,38 @@ cloudwatch_alerts_alarms = [
     name                 = "sbap01-disk-free-0"
     namespace            = "CWAgent"
     metric_name          = "disk_used_percent"
-    dimensions           = { InstanceId = "i-04bc18689d5d8a9c5", path = "/" }
+    dimensions           = { InstanceId = "i-04bc18689d5d8a9c5", path = "/", ImageId = "ami-0447a785619664547", InstanceType = "r5.large", device = "mapper/rhel-root", fstype = "xfs" }
+    statistic            = "Maximum"
+    threshold            = 100
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  # sbap01 also has a real /home volume, separate from /.
+  {
+    name                 = "sbap01-home-disk-free-8"
+    namespace            = "CWAgent"
+    metric_name          = "disk_used_percent"
+    dimensions           = { InstanceId = "i-04bc18689d5d8a9c5", path = "/home", ImageId = "ami-0447a785619664547", InstanceType = "r5.large", device = "mapper/rhel-home", fstype = "xfs" }
+    statistic            = "Maximum"
+    threshold            = 92
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  {
+    name                 = "sbap01-home-disk-free-4"
+    namespace            = "CWAgent"
+    metric_name          = "disk_used_percent"
+    dimensions           = { InstanceId = "i-04bc18689d5d8a9c5", path = "/home", ImageId = "ami-0447a785619664547", InstanceType = "r5.large", device = "mapper/rhel-home", fstype = "xfs" }
+    statistic            = "Maximum"
+    threshold            = 96
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  {
+    name                 = "sbap01-home-disk-free-0"
+    namespace            = "CWAgent"
+    metric_name          = "disk_used_percent"
+    dimensions           = { InstanceId = "i-04bc18689d5d8a9c5", path = "/home", ImageId = "ami-0447a785619664547", InstanceType = "r5.large", device = "mapper/rhel-home", fstype = "xfs" }
     statistic            = "Maximum"
     threshold            = 100
     comparison_operator  = "GreaterThanOrEqualToThreshold"
@@ -44,7 +75,7 @@ cloudwatch_alerts_alarms = [
     name                 = "emts01-disk-free-8"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0f534974106934085", InstanceType = "m5.2xlarge" }
     statistic            = "Minimum"
     threshold            = 8
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -54,7 +85,7 @@ cloudwatch_alerts_alarms = [
     name                 = "emts01-disk-free-4"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0f534974106934085", InstanceType = "m5.2xlarge" }
     statistic            = "Minimum"
     threshold            = 4
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -64,7 +95,38 @@ cloudwatch_alerts_alarms = [
     name                 = "emts01-disk-free-0"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0f534974106934085", InstanceType = "m5.2xlarge" }
+    statistic            = "Minimum"
+    threshold            = 0
+    comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  # emts01 also has a real D: data volume (labeled "App"), separate from C:.
+  {
+    name                 = "emts01-d-disk-free-8"
+    namespace            = "CWAgent"
+    metric_name          = "LogicalDisk % Free Space"
+    dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c", instance = "D:", objectname = "LogicalDisk", ImageId = "ami-0f534974106934085", InstanceType = "m5.2xlarge" }
+    statistic            = "Minimum"
+    threshold            = 8
+    comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  {
+    name                 = "emts01-d-disk-free-4"
+    namespace            = "CWAgent"
+    metric_name          = "LogicalDisk % Free Space"
+    dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c", instance = "D:", objectname = "LogicalDisk", ImageId = "ami-0f534974106934085", InstanceType = "m5.2xlarge" }
+    statistic            = "Minimum"
+    threshold            = 4
+    comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  {
+    name                 = "emts01-d-disk-free-0"
+    namespace            = "CWAgent"
+    metric_name          = "LogicalDisk % Free Space"
+    dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c", instance = "D:", objectname = "LogicalDisk", ImageId = "ami-0f534974106934085", InstanceType = "m5.2xlarge" }
     statistic            = "Minimum"
     threshold            = 0
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -74,7 +136,7 @@ cloudwatch_alerts_alarms = [
     name                 = "emts02-disk-free-8"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0334e1242e1ceff4e", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-0334e1242e1ceff4e", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0d16ebbf0d8306d63", InstanceType = "m5.xlarge" }
     statistic            = "Minimum"
     threshold            = 8
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -84,7 +146,7 @@ cloudwatch_alerts_alarms = [
     name                 = "emts02-disk-free-4"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0334e1242e1ceff4e", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-0334e1242e1ceff4e", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0d16ebbf0d8306d63", InstanceType = "m5.xlarge" }
     statistic            = "Minimum"
     threshold            = 4
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -94,7 +156,7 @@ cloudwatch_alerts_alarms = [
     name                 = "emts02-disk-free-0"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-0334e1242e1ceff4e", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-0334e1242e1ceff4e", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0d16ebbf0d8306d63", InstanceType = "m5.xlarge" }
     statistic            = "Minimum"
     threshold            = 0
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -104,7 +166,7 @@ cloudwatch_alerts_alarms = [
     name                 = "emts03-disk-free-8"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-04cf9c488ce8c1a1e", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-04cf9c488ce8c1a1e", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0d16ebbf0d8306d63", InstanceType = "m5.large" }
     statistic            = "Minimum"
     threshold            = 8
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -114,7 +176,7 @@ cloudwatch_alerts_alarms = [
     name                 = "emts03-disk-free-4"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-04cf9c488ce8c1a1e", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-04cf9c488ce8c1a1e", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0d16ebbf0d8306d63", InstanceType = "m5.large" }
     statistic            = "Minimum"
     threshold            = 4
     comparison_operator  = "LessThanOrEqualToThreshold"
@@ -124,10 +186,55 @@ cloudwatch_alerts_alarms = [
     name                 = "emts03-disk-free-0"
     namespace            = "CWAgent"
     metric_name          = "LogicalDisk % Free Space"
-    dimensions           = { InstanceId = "i-04cf9c488ce8c1a1e", instance = "C:", objectname = "LogicalDisk" }
+    dimensions           = { InstanceId = "i-04cf9c488ce8c1a1e", instance = "C:", objectname = "LogicalDisk", ImageId = "ami-0d16ebbf0d8306d63", InstanceType = "m5.large" }
     statistic            = "Minimum"
     threshold            = 0
     comparison_operator  = "LessThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  # Reachability (ping) alarms. EC2 status check, no agent needed.
+  {
+    name                 = "sbap01-unreachable"
+    namespace            = "AWS/EC2"
+    metric_name          = "StatusCheckFailed_System"
+    dimensions           = { InstanceId = "i-04bc18689d5d8a9c5" }
+    period               = 300
+    evaluation_periods   = 1
+    threshold            = 1
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  {
+    name                 = "emts01-unreachable"
+    namespace            = "AWS/EC2"
+    metric_name          = "StatusCheckFailed_System"
+    dimensions           = { InstanceId = "i-0ef056ef9a04e2c6c" }
+    period               = 300
+    evaluation_periods   = 1
+    threshold            = 1
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  {
+    name                 = "emts02-unreachable"
+    namespace            = "AWS/EC2"
+    metric_name          = "StatusCheckFailed_System"
+    dimensions           = { InstanceId = "i-0334e1242e1ceff4e" }
+    period               = 300
+    evaluation_periods   = 1
+    threshold            = 1
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
+    notification_channel = "routine"
+  },
+  {
+    name                 = "emts03-unreachable"
+    namespace            = "AWS/EC2"
+    metric_name          = "StatusCheckFailed_System"
+    dimensions           = { InstanceId = "i-04cf9c488ce8c1a1e" }
+    period               = 300
+    evaluation_periods   = 1
+    threshold            = 1
+    comparison_operator  = "GreaterThanOrEqualToThreshold"
     notification_channel = "routine"
   },
 ]
