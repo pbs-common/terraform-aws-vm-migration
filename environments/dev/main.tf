@@ -307,7 +307,7 @@ import {
 }
 
 module "config" {
-  source = "./modules/config"
+  source = "../../modules/config"
   alert_email = "billy.mclean@protagona.com"
 }
   
