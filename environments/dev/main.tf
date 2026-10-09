@@ -309,6 +309,7 @@ import {
 module "config" {
   source = "./modules/config"
   alert_email = "billy.mclean@protagona.com"
+}
   
 module "sbap01_alarms" {
   source = "../../modules/instance-alarms"
