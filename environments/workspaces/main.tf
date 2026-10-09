@@ -47,11 +47,6 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
-locals {
-  # Hold notifications until alarms settle after the first real apply.
-  cloudwatch_alarms_enabled = false
-}
-
 module "cloudwatch_alerts" {
   source = "../../modules/cloudwatch-alerts"
 
@@ -106,7 +101,7 @@ module "ngws_zc_alarms" {
   disks         = [{ path = "/", device = "mapper/ubuntu--vg-ubuntu--lv", fstype = "ext4" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -155,7 +150,7 @@ module "ghsd01_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -208,7 +203,7 @@ module "sits01_alarms" {
   ]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -256,7 +251,7 @@ module "ngws_sm_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -305,7 +300,7 @@ module "ngws_bb_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -354,7 +349,7 @@ module "ngws_kt_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -403,7 +398,7 @@ module "devops_app1_dev_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -456,7 +451,7 @@ module "esdev_brian_alarms" {
   ]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -505,7 +500,7 @@ module "esdev_chex_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -554,7 +549,7 @@ module "sid1_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -597,7 +592,7 @@ module "ghsd04_alarms" {
   disks         = [{ path = "/", device = "mapper/ubuntu--vg-ubuntu--lv", fstype = "ext4" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -640,7 +635,7 @@ module "esdev10_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -689,7 +684,7 @@ module "ngws_mr_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -738,7 +733,7 @@ module "ngws_ld_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -785,7 +780,7 @@ module "esdev12_alarms" {
   ]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -832,7 +827,7 @@ module "esdev08_alarms" {
   ]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }

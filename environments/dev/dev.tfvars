@@ -7,6 +7,9 @@ cloudwatch_alerts_notification_channels = {
   }
 }
 
+# Flip to true once alarms are verified settled after the first apply.
+cloudwatch_alarms_enabled = false
+
 tags = {
   "map-migrated"            = "mig5T578AWUOW"
   "pbs:billing:environment" = "dev"

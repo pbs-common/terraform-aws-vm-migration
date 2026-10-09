@@ -63,3 +63,9 @@ variable "cloudwatch_alerts_notification_channels" {
   }))
   default = {}
 }
+
+variable "cloudwatch_alarms_enabled" {
+  description = "Whether CloudWatch alarms notify on state change. Set false for an initial rollout so alarms settle into real state without firing, then flip to true once verified."
+  type        = bool
+  default     = false
+}

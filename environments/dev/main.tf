@@ -42,11 +42,6 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
-locals {
-  # Hold notifications until alarms settle after the first real apply.
-  cloudwatch_alarms_enabled = false
-}
-
 module "cloudwatch_alerts" {
   source = "../../modules/cloudwatch-alerts"
 
@@ -105,7 +100,7 @@ module "emts01_alarms" {
   ]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -154,7 +149,7 @@ module "emts03_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -203,7 +198,7 @@ module "emts02_alarms" {
   disks         = [{ drive_letter = "C:" }]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -327,7 +322,7 @@ module "sbap01_alarms" {
   ]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  actions_enabled   = local.cloudwatch_alarms_enabled
+  actions_enabled   = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }

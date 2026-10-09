@@ -182,7 +182,7 @@ module "dc1_alarms" {
 
   routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
   critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
-  actions_enabled    = local.cloudwatch_alarms_enabled
+  actions_enabled    = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -233,7 +233,7 @@ module "dc2_alarms" {
 
   routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
   critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
-  actions_enabled    = local.cloudwatch_alarms_enabled
+  actions_enabled    = var.cloudwatch_alarms_enabled
 
   tags = var.tags
 }
@@ -296,9 +296,6 @@ data "aws_secretsmanager_secret" "slack_webhook" {
 }
 
 locals {
-  # Hold notifications until alarms settle after the first real apply.
-  cloudwatch_alarms_enabled = false
-
   cloudwatch_alerts_notification_channels = {
     for key, channel in var.cloudwatch_alerts_notification_channels : key => merge(channel, {
       slack_webhook_secret_arn = (
