@@ -221,4 +221,4 @@ Until the move, coordinate any significant module changes so they are not lost i
 - [environments/README.md](environments/README.md) — GitHub Environment secret names
 - [environments/org-delegation/README.md](environments/org-delegation/README.md) — Organizations
   delegation and how to run it
-- `modules/*/README.md` — per-module usage
+- `modules/*/README.md` — usage documentation for modules that provide it
