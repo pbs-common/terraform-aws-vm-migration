@@ -89,10 +89,14 @@ resource "aws_sns_topic_subscription" "pagerduty" {
 # Slack and Teams webhooks don't support the SNS confirmation handshake and expect
 # their own JSON shape, not the raw SNS envelope. Each channel with a webhook gets its
 # own Lambda forwarder, subscribed to that channel's topic, to reshape and send it.
-data "archive_file" "webhook_forwarder" {
-  type        = "zip"
-  source_file = "${path.module}/lambda/webhook_forwarder.py"
-  output_path = "${path.module}/.build/webhook_forwarder.zip"
+#
+# Code comes from S3, not a local zip built here: plan and apply run as separate CI jobs
+# on separate runners, so a zip built locally during plan never exists when apply runs.
+# A CI step zips and uploads lambda/webhook_forwarder.py to S3 before plan/apply run.
+# The hash below reads the committed source directly, which is always present on any
+# checkout, so Terraform still redeploys exactly when the code actually changes.
+locals {
+  webhook_forwarder_source_hash = filebase64sha256("${path.module}/lambda/webhook_forwarder.py")
 }
 
 resource "aws_iam_role" "webhook_forwarder" {
@@ -155,8 +159,9 @@ resource "aws_lambda_function" "webhook_forwarder" {
   # Slack and Teams post sequentially, 5s each - 10s leaves no room for secrets
   # fetch, cold start, or a multi-record batch.
   timeout          = 30
-  filename         = data.archive_file.webhook_forwarder.output_path
-  source_code_hash = data.archive_file.webhook_forwarder.output_base64sha256
+  s3_bucket        = var.lambda_artifact_s3_bucket
+  s3_key           = var.lambda_artifact_s3_key
+  source_code_hash = local.webhook_forwarder_source_hash
 
   environment {
     # coalesce() errors here instead of returning "" when both are null, which is

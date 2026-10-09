@@ -79,6 +79,10 @@ module "cloudwatch_alerts" {
 
   notification_channels = local.cloudwatch_alerts_notification_channels
 
+  # Same bucket as this account's Terraform state (see .github/workflows/staging.yaml). A
+  # CI step uploads the webhook forwarder Lambda's zip here before plan/apply run.
+  lambda_artifact_s3_bucket = "pbs-staging-terraform-state"
+
   tags = var.tags
 }
 

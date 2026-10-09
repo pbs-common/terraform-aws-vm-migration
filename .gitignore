@@ -14,8 +14,8 @@ terraform.rc
 tfplan
 plan_output.txt
 
-## Lambda build artifacts (zipped by the archive provider at plan/apply time)
-modules/cloudwatch-alerts/.build/
+## Lambda build artifacts (zipped and uploaded to S3 by a CI step before plan/apply run)
+modules/cloudwatch-alerts/lambda/webhook_forwarder.zip
 
 ## Python (the CI coverage checker in .github/scripts and its self-test)
 __pycache__/

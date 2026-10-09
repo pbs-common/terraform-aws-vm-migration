@@ -79,6 +79,18 @@ variable "lambda_log_retention_days" {
   default     = 14
 }
 
+variable "lambda_artifact_s3_bucket" {
+  description = "S3 bucket holding the webhook forwarder Lambda's deployment package, uploaded by a CI step before plan/apply run. Only required if a channel sets a Slack or Teams webhook."
+  type        = string
+  default     = null
+}
+
+variable "lambda_artifact_s3_key" {
+  description = "S3 key of the webhook forwarder Lambda's deployment package in lambda_artifact_s3_bucket."
+  type        = string
+  default     = "cloudwatch-alerts/webhook_forwarder.zip"
+}
+
 variable "tags" {
   description = "Tags applied to resources, merged with an automatic Name tag."
   type        = map(string)
