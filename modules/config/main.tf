@@ -82,6 +82,7 @@ resource "aws_iam_role_policy" "config_recorder_s3" {
       Effect = "Allow"
       Action = [
         "s3:GetBucketVersioning",
+        "s3:GetBucketAcl",
         "s3:PutObject",
         "s3:GetObject"
       ]
@@ -129,8 +130,8 @@ resource "aws_config_configuration_recorder_status" "main" {
 
 data "archive_file" "checker" {
   type        = "zip"
-  source_file = "${path.module}/lambda/ec2_alarm_check.py"
-  output_path = "${path.module}/build/ec2_alarm_check.zip"
+  source_file = "${path.module}/ec2_alarm_check.py"
+  output_path = "${path.module}/ec2_alarm_check.zip"
 }
 
 resource "aws_iam_role" "checker" {
@@ -213,10 +214,10 @@ resource "aws_config_config_rule" "ec2_alarms" {
     }
   }
 
-  depends_on = flatten([
+  depends_on = [
     aws_lambda_permission.config,
-    aws_config_configuration_recorder_status.main[*]
-  ])
+    aws_config_configuration_recorder_status.main,
+  ]
 }
 
 # ---------------------------------------------------------------------------
