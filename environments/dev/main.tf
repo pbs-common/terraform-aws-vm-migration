@@ -43,23 +43,8 @@ resource "aws_ssm_association" "cloudwatch_agent" {
 }
 
 locals {
-  # ami/instance_type per managed instance, merged into CWAgent alarm dimensions
-  # below so they can't go stale after a resize or replacement.
-  instance_identity = {
-    "i-04bc18689d5d8a9c5" = { ami = aws_instance.s_sbap01_dat1_x.ami, instance_type = aws_instance.s_sbap01_dat1_x.instance_type }
-    "i-0ef056ef9a04e2c6c" = { ami = aws_instance.s_emts01_dat1_w.ami, instance_type = aws_instance.s_emts01_dat1_w.instance_type }
-    "i-0334e1242e1ceff4e" = { ami = aws_instance.s_emts02_dat1_w.ami, instance_type = aws_instance.s_emts02_dat1_w.instance_type }
-    "i-04cf9c488ce8c1a1e" = { ami = aws_instance.s_emts03_dat1_w.ami, instance_type = aws_instance.s_emts03_dat1_w.instance_type }
-  }
-
-  cloudwatch_alerts_alarms = [
-    for alarm in var.cloudwatch_alerts_alarms : alarm.namespace == "CWAgent" ? merge(alarm, {
-      dimensions = merge(alarm.dimensions, {
-        ImageId      = local.instance_identity[alarm.dimensions.InstanceId].ami
-        InstanceType = local.instance_identity[alarm.dimensions.InstanceId].instance_type
-      })
-    }) : alarm
-  ]
+  # Hold notifications until alarms settle after the first real apply.
+  cloudwatch_alarms_enabled = false
 }
 
 module "cloudwatch_alerts" {
@@ -68,12 +53,6 @@ module "cloudwatch_alerts" {
   name = "dev"
 
   notification_channels = var.cloudwatch_alerts_notification_channels
-
-  alarms = local.cloudwatch_alerts_alarms
-
-  # Initial rollout: let alarms settle into real state without notifying.
-  # Flip to true once verified via the API that nothing is stuck in ALARM.
-  actions_enabled = false
 
   tags = var.tags
 }
@@ -110,6 +89,27 @@ import {
   id = "i-0ef056ef9a04e2c6c"
 }
 
+module "emts01_alarms" {
+  source = "../../modules/instance-alarms"
+
+  environment   = "dev"
+  instance_name = "emts01"
+  instance_id   = aws_instance.s_emts01_dat1_w.id
+  image_id      = aws_instance.s_emts01_dat1_w.ami
+  instance_type = aws_instance.s_emts01_dat1_w.instance_type
+  os_family     = "windows"
+  disks = [
+    { drive_letter = "C:" },
+    # emts01 also has a real D: data volume (labeled "App"), separate from C:.
+    { label = "d", drive_letter = "D:" },
+  ]
+
+  routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  actions_enabled   = local.cloudwatch_alarms_enabled
+
+  tags = var.tags
+}
+
 resource "aws_instance" "s_emts03_dat1_w" {
   ami           = "ami-0d16ebbf0d8306d63"
   instance_type = "m5.large"
@@ -142,6 +142,23 @@ import {
   id = "i-04cf9c488ce8c1a1e"
 }
 
+module "emts03_alarms" {
+  source = "../../modules/instance-alarms"
+
+  environment   = "dev"
+  instance_name = "emts03"
+  instance_id   = aws_instance.s_emts03_dat1_w.id
+  image_id      = aws_instance.s_emts03_dat1_w.ami
+  instance_type = aws_instance.s_emts03_dat1_w.instance_type
+  os_family     = "windows"
+  disks         = [{ drive_letter = "C:" }]
+
+  routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  actions_enabled   = local.cloudwatch_alarms_enabled
+
+  tags = var.tags
+}
+
 resource "aws_instance" "s_emts02_dat1_w" {
   ami           = "ami-0d16ebbf0d8306d63"
   instance_type = "m5.xlarge"
@@ -172,6 +189,23 @@ resource "aws_instance" "s_emts02_dat1_w" {
 import {
   to = aws_instance.s_emts02_dat1_w
   id = "i-0334e1242e1ceff4e"
+}
+
+module "emts02_alarms" {
+  source = "../../modules/instance-alarms"
+
+  environment   = "dev"
+  instance_name = "emts02"
+  instance_id   = aws_instance.s_emts02_dat1_w.id
+  image_id      = aws_instance.s_emts02_dat1_w.ami
+  instance_type = aws_instance.s_emts02_dat1_w.instance_type
+  os_family     = "windows"
+  disks         = [{ drive_letter = "C:" }]
+
+  routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  actions_enabled   = local.cloudwatch_alarms_enabled
+
+  tags = var.tags
 }
 
 resource "aws_security_group" "sbap01_sonarqube" {
@@ -275,4 +309,25 @@ resource "aws_instance" "s_sbap01_dat1_x" {
 import {
   to = aws_instance.s_sbap01_dat1_x
   id = "i-04bc18689d5d8a9c5"
+}
+
+module "sbap01_alarms" {
+  source = "../../modules/instance-alarms"
+
+  environment   = "dev"
+  instance_name = "sbap01"
+  instance_id   = aws_instance.s_sbap01_dat1_x.id
+  image_id      = aws_instance.s_sbap01_dat1_x.ami
+  instance_type = aws_instance.s_sbap01_dat1_x.instance_type
+  os_family     = "linux"
+  disks = [
+    { path = "/", device = "mapper/rhel-root", fstype = "xfs" },
+    # sbap01 also has a real /home volume, separate from /.
+    { label = "home", path = "/home", device = "mapper/rhel-home", fstype = "xfs" },
+  ]
+
+  routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  actions_enabled   = local.cloudwatch_alarms_enabled
+
+  tags = var.tags
 }

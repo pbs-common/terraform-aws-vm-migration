@@ -42,21 +42,27 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
-locals {
-  # ami/instance_type per managed instance, merged into CWAgent alarm dimensions
-  # below so they can't go stale after a resize or replacement.
-  instance_identity = {
-    "i-05daff18817bf6938" = { ami = aws_instance.esb_rtm01_qa.ami, instance_type = aws_instance.esb_rtm01_qa.instance_type }
-  }
+data "aws_caller_identity" "current" {}
 
-  cloudwatch_alerts_alarms = [
-    for alarm in var.cloudwatch_alerts_alarms : alarm.namespace == "CWAgent" ? merge(alarm, {
-      dimensions = merge(alarm.dimensions, {
-        ImageId      = local.instance_identity[alarm.dimensions.InstanceId].ami
-        InstanceType = local.instance_identity[alarm.dimensions.InstanceId].instance_type
-      })
-    }) : alarm
-  ]
+locals {
+  # Hold notifications until alarms settle after the first real apply.
+  cloudwatch_alarms_enabled = false
+
+  # Builds the full secret ARN from the current account.
+  cloudwatch_alerts_notification_channels = {
+    for key, channel in var.cloudwatch_alerts_notification_channels : key => merge(channel, {
+      slack_webhook_secret_arn = (
+        channel.slack_webhook_secret_name != null
+        ? "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${channel.slack_webhook_secret_name}"
+        : null
+      )
+      pagerduty_integration_key_secret_arn = (
+        channel.pagerduty_integration_key_secret_name != null
+        ? "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${channel.pagerduty_integration_key_secret_name}"
+        : null
+      )
+    })
+  }
 }
 
 module "cloudwatch_alerts" {
@@ -64,13 +70,7 @@ module "cloudwatch_alerts" {
 
   name = "staging"
 
-  notification_channels = var.cloudwatch_alerts_notification_channels
-
-  alarms = local.cloudwatch_alerts_alarms
-
-  # Initial rollout: let alarms settle into real state without notifying.
-  # Flip to true once verified via the API that nothing is stuck in ALARM.
-  actions_enabled = false
+  notification_channels = local.cloudwatch_alerts_notification_channels
 
   tags = var.tags
 }
@@ -105,4 +105,25 @@ resource "aws_instance" "esb_rtm01_qa" {
 import {
   to = aws_instance.esb_rtm01_qa
   id = "i-05daff18817bf6938"
+}
+
+module "esb_rtm01_qa_alarms" {
+  source = "../../modules/instance-alarms"
+
+  environment   = "staging"
+  instance_name = "esb-rtm01-qa"
+  instance_id   = aws_instance.esb_rtm01_qa.id
+  image_id      = aws_instance.esb_rtm01_qa.ami
+  instance_type = aws_instance.esb_rtm01_qa.instance_type
+  os_family     = "linux"
+  disks = [
+    { path = "/", device = "mapper/rhel-root", fstype = "xfs" },
+    { label = "home", path = "/home", device = "mapper/rhel-home", fstype = "xfs" },
+  ]
+
+  routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
+  actions_enabled    = local.cloudwatch_alarms_enabled
+
+  tags = var.tags
 }

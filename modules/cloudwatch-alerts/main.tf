@@ -1,12 +1,19 @@
 locals {
+  # A channel with topic_arn set reuses an existing topic; subscriptions on it are
+  # managed by whoever owns that topic, not this module.
+  managed_channels = {
+    for key, channel in var.notification_channels : key => channel
+    if channel.topic_arn == null
+  }
+
   # Channels with a webhook get a Lambda, role, and log group.
   channels_with_webhook = {
-    for key, channel in var.notification_channels : key => channel
+    for key, channel in local.managed_channels : key => channel
     if channel.slack_webhook_secret_arn != null || channel.teams_webhook_secret_arn != null
   }
 
   email_subscriptions = merge([
-    for channel_key, channel in var.notification_channels : {
+    for channel_key, channel in local.managed_channels : {
       for email in channel.email_subscriptions : "${channel_key}-${email}" => {
         channel_key = channel_key
         endpoint    = email
@@ -15,7 +22,7 @@ locals {
   ]...)
 
   sms_subscriptions = merge([
-    for channel_key, channel in var.notification_channels : {
+    for channel_key, channel in local.managed_channels : {
       for phone in channel.sms_subscriptions : "${channel_key}-${phone}" => {
         channel_key = channel_key
         endpoint    = phone
@@ -24,11 +31,16 @@ locals {
   ]...)
 
   pagerduty_channels = {
-    for key, channel in var.notification_channels : key => channel
+    for key, channel in local.managed_channels : key => channel
     if channel.pagerduty_integration_key_secret_arn != null
   }
 
-  alarms_by_name = { for a in var.alarms : a.name => a }
+  # Externally-owned ARN if set, else the topic this module created.
+  topic_arns = {
+    for key, channel in var.notification_channels : key => (
+      channel.topic_arn != null ? channel.topic_arn : aws_sns_topic.this[key].arn
+    )
+  }
 }
 
 data "aws_secretsmanager_secret_version" "pagerduty" {
@@ -38,7 +50,7 @@ data "aws_secretsmanager_secret_version" "pagerduty" {
 }
 
 resource "aws_sns_topic" "this" {
-  for_each = var.notification_channels
+  for_each = local.managed_channels
 
   name = "${var.name}-${each.key}-alerts"
   # alias/aws/sns blocks CloudWatch Alarms from publishing here, confirmed directly.
@@ -180,28 +192,4 @@ resource "aws_sns_topic_subscription" "webhook_forwarder" {
   topic_arn = aws_sns_topic.this[each.key].arn
   protocol  = "lambda"
   endpoint  = aws_lambda_function.webhook_forwarder[each.key].arn
-}
-
-# CloudWatch alarms
-resource "aws_cloudwatch_metric_alarm" "this" {
-  for_each = local.alarms_by_name
-
-  alarm_name          = "${var.name}-${each.value.name}"
-  alarm_description   = each.value.description
-  namespace           = each.value.namespace
-  metric_name         = each.value.metric_name
-  statistic           = each.value.statistic
-  period              = each.value.period
-  evaluation_periods  = each.value.evaluation_periods
-  datapoints_to_alarm = each.value.datapoints_to_alarm
-  threshold           = each.value.threshold
-  comparison_operator = each.value.comparison_operator
-  dimensions          = each.value.dimensions
-  treat_missing_data  = each.value.treat_missing_data
-  actions_enabled     = var.actions_enabled
-
-  alarm_actions = [aws_sns_topic.this[each.value.notification_channel].arn]
-  ok_actions    = each.value.notify_ok ? [aws_sns_topic.this[each.value.notification_channel].arn] : []
-
-  tags = merge(var.tags, { Name = "${var.name}-${each.value.name}" })
 }

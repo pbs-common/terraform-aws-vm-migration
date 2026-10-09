@@ -12,7 +12,7 @@ variable "notification_channels" {
   description = <<-EOT
     Named notification channels, like "routine" or "critical", each its own SNS topic
     with its own subscriptions. Lets alarms route to different channels instead of
-    notifying everyone every time. Each alarm in `alarms` picks one channel by name.
+    notifying everyone every time.
 
     Per channel:
       email_subscriptions       - email addresses subscribed directly. Each one has to
@@ -33,6 +33,12 @@ variable "notification_channels" {
                                    Terraform state either way. Subscribes PagerDuty's
                                    endpoint directly over HTTPS, no Lambda needed, it
                                    auto-confirms.
+      topic_arn                 - ARN of an existing SNS topic to reuse instead of
+                                   creating one. When set, this module skips creating
+                                   a topic and skips managing any subscriptions on it
+                                   (email/sms/Slack/Teams/PagerDuty settings above are
+                                   ignored for this channel) - subscriptions are the
+                                   owning module/account's responsibility.
   EOT
   type = map(object({
     email_subscriptions                  = optional(list(string), [])
@@ -40,6 +46,7 @@ variable "notification_channels" {
     slack_webhook_secret_arn             = optional(string)
     teams_webhook_secret_arn             = optional(string)
     pagerduty_integration_key_secret_arn = optional(string)
+    topic_arn                            = optional(string)
   }))
   default = {}
 }
@@ -54,43 +61,6 @@ variable "lambda_log_retention_days" {
   description = "Log retention, in days, for each webhook forwarder Lambda. Only matters for channels with a Slack or Teams webhook set."
   type        = number
   default     = 14
-}
-
-variable "alarms" {
-  description = "CloudWatch metric alarms to create. Each one notifies, and clears unless notify_ok is false, through one channel in notification_channels. Leave empty until real thresholds are ready."
-  type = list(object({
-    name                 = string
-    description          = optional(string)
-    namespace            = string
-    metric_name          = string
-    statistic            = optional(string, "Average")
-    period               = optional(number, 300)
-    evaluation_periods   = optional(number, 1)
-    datapoints_to_alarm  = optional(number)
-    threshold            = number
-    comparison_operator  = string
-    dimensions           = optional(map(string), {})
-    treat_missing_data   = optional(string, "missing")
-    notify_ok            = optional(bool, true)
-    notification_channel = string
-  }))
-  default = []
-
-  validation {
-    condition     = length(var.alarms) == length(distinct([for a in var.alarms : a.name]))
-    error_message = "Each entry in alarms must have a unique name."
-  }
-
-  validation {
-    condition     = alltrue([for a in var.alarms : contains(keys(var.notification_channels), a.notification_channel)])
-    error_message = "Each alarm's notification_channel must be a key defined in notification_channels."
-  }
-}
-
-variable "actions_enabled" {
-  description = "Whether alarms notify on state change. Set false for an initial rollout so alarms settle into real state without firing, then flip to true once verified."
-  type        = bool
-  default     = true
 }
 
 variable "tags" {

@@ -169,6 +169,24 @@ module "dc1" {
   })
 }
 
+module "dc1_alarms" {
+  source = "../../modules/instance-alarms"
+
+  environment   = "ad"
+  instance_name = "dc1"
+  instance_id   = module.dc1.instance_id
+  image_id      = module.dc1.ami_id
+  instance_type = module.dc1.instance_type
+  os_family     = "windows"
+  disks         = [{ drive_letter = "C:" }]
+
+  routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
+  actions_enabled    = local.cloudwatch_alarms_enabled
+
+  tags = var.tags
+}
+
 module "ssm_session_access" {
   source = "../../modules/ssm-session-access-policy"
 
@@ -200,6 +218,24 @@ module "dc2" {
   tags = merge(var.tags, {
     daily_backups = "true"
   })
+}
+
+module "dc2_alarms" {
+  source = "../../modules/instance-alarms"
+
+  environment   = "ad"
+  instance_name = "dc2"
+  instance_id   = module.dc2.instance_id
+  image_id      = module.dc2.ami_id
+  instance_type = module.dc2.instance_type
+  os_family     = "windows"
+  disks         = [{ drive_letter = "C:" }]
+
+  routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
+  actions_enabled    = local.cloudwatch_alarms_enabled
+
+  tags = var.tags
 }
 
 module "backup" {
@@ -247,25 +283,27 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
-locals {
-  # ami/instance_type per managed instance, merged into CWAgent alarm dimensions
-  # below so they can't go stale after a resize or replacement. ami comes out
-  # marked sensitive (ec2-workload's golden_ami_id lookup propagates that), so
-  # these alarms' dimensions show as "(sensitive value)" in plan output -
-  # harmless, just a plan-readability quirk, not a real secret.
-  instance_identity = {
-    "i-0c3f94aab892dc2aa" = { ami = module.dc1.ami_id, instance_type = module.dc1.instance_type }
-    "i-092b297b4d11cdb21" = { ami = module.dc2.ami_id, instance_type = module.dc2.instance_type }
-  }
+data "aws_caller_identity" "current" {}
 
-  cloudwatch_alerts_alarms = [
-    for alarm in var.cloudwatch_alerts_alarms : alarm.namespace == "CWAgent" ? merge(alarm, {
-      dimensions = merge(alarm.dimensions, {
-        ImageId      = local.instance_identity[alarm.dimensions.InstanceId].ami
-        InstanceType = local.instance_identity[alarm.dimensions.InstanceId].instance_type
-      })
-    }) : alarm
-  ]
+locals {
+  # Hold notifications until alarms settle after the first real apply.
+  cloudwatch_alarms_enabled = false
+
+  # Builds the full secret ARN from the current account.
+  cloudwatch_alerts_notification_channels = {
+    for key, channel in var.cloudwatch_alerts_notification_channels : key => merge(channel, {
+      slack_webhook_secret_arn = (
+        channel.slack_webhook_secret_name != null
+        ? "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${channel.slack_webhook_secret_name}"
+        : null
+      )
+      pagerduty_integration_key_secret_arn = (
+        channel.pagerduty_integration_key_secret_name != null
+        ? "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${channel.pagerduty_integration_key_secret_name}"
+        : null
+      )
+    })
+  }
 }
 
 module "cloudwatch_alerts" {
@@ -273,13 +311,7 @@ module "cloudwatch_alerts" {
 
   name = "ad"
 
-  notification_channels = var.cloudwatch_alerts_notification_channels
-
-  alarms = local.cloudwatch_alerts_alarms
-
-  # Initial rollout: let alarms settle into real state without notifying.
-  # Flip to true once verified via the API that nothing is stuck in ALARM.
-  actions_enabled = false
+  notification_channels = local.cloudwatch_alerts_notification_channels
 
   tags = var.tags
 }
