@@ -213,10 +213,10 @@ resource "aws_config_config_rule" "ec2_alarms" {
     }
   }
 
-  depends_on = concat(
-    [aws_lambda_permission.config],
-    local.recorder_exists ? [] : [aws_config_configuration_recorder_status.main[0]]
-  )
+  depends_on = flatten([
+    aws_lambda_permission.config,
+    aws_config_configuration_recorder_status.main[*]
+  ])
 }
 
 # ---------------------------------------------------------------------------
