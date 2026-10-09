@@ -42,6 +42,63 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
+data "aws_caller_identity" "current" {}
+
+# Looks up the real ARN (with its random suffix) so the webhook Lambda's IAM policy matches it.
+data "aws_secretsmanager_secret" "slack_webhook" {
+  for_each = {
+    for key, channel in var.cloudwatch_alerts_notification_channels : key => channel
+    if channel.slack_webhook_secret_name != null
+  }
+
+  name = each.value.slack_webhook_secret_name
+}
+
+locals {
+  cloudwatch_alerts_notification_channels = {
+    for key, channel in var.cloudwatch_alerts_notification_channels : key => merge(channel, {
+      slack_webhook_secret_arn = (
+        channel.slack_webhook_secret_name != null
+        ? data.aws_secretsmanager_secret.slack_webhook[key].arn
+        : null
+      )
+      # Read directly by Terraform, not IAM-matched, so the suffix-less ARN is fine here.
+      pagerduty_integration_key_secret_arn = (
+        channel.pagerduty_integration_key_secret_name != null
+        ? "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${channel.pagerduty_integration_key_secret_name}"
+        : null
+      )
+    })
+  }
+}
+
+module "cloudwatch_alerts" {
+  source = "../../modules/cloudwatch-alerts"
+
+  name = "prod"
+
+  notification_channels = local.cloudwatch_alerts_notification_channels
+
+  tags = var.tags
+}
+
+module "amsi01_alarms" {
+  source = "../../modules/instance-alarms"
+
+  environment   = "prod"
+  instance_name = "amsi01"
+  instance_id   = aws_instance.i_amsi01_pat1_w.id
+  image_id      = aws_instance.i_amsi01_pat1_w.ami
+  instance_type = aws_instance.i_amsi01_pat1_w.instance_type
+  os_family     = "windows"
+  disks         = [{ drive_letter = "C:" }]
+
+  routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
+  actions_enabled    = var.cloudwatch_alarms_enabled
+
+  tags = var.tags
+}
 resource "aws_instance" "i_amsi01_pat1_w" {
   ami           = "ami-0d16ebbf0d8306d63"
   instance_type = "m5.large"

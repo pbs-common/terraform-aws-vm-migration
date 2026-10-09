@@ -1,5 +1,22 @@
 aws_region = "us-east-1"
 
+# CloudWatch alerts: ad is PROD tier. Two channels: routine (email, disk at 8%
+# free) and critical (email, Slack, PagerDuty, for ping/service down and disk at 4%/0%
+# free). Slack webhook secret and PagerDuty key are both live, by name only.
+cloudwatch_alerts_notification_channels = {
+  routine = {
+    email_subscriptions = ["winopsdl@pbs.org"]
+  }
+  critical = {
+    email_subscriptions                   = ["winopsdl@pbs.org"]
+    slack_webhook_secret_name             = "ad-cloudwatch-alerts-slack-webhook"
+    pagerduty_integration_key_secret_name = "ad-cloudwatch-alerts-pagerduty-key"
+  }
+}
+
+# Flip to true once alarms are verified settled after the first apply.
+cloudwatch_alarms_enabled = false
+
 # Golden AMI: AD-DS/DNS installed, not promoted, sysprepped. Built manually.
 golden_ami_id = "ami-038905f9eb15c1313"
 

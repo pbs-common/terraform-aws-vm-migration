@@ -169,6 +169,24 @@ module "dc1" {
   })
 }
 
+module "dc1_alarms" {
+  source = "../../modules/instance-alarms"
+
+  environment   = "ad"
+  instance_name = "dc1"
+  instance_id   = module.dc1.instance_id
+  image_id      = module.dc1.ami_id
+  instance_type = module.dc1.instance_type
+  os_family     = "windows"
+  disks         = [{ drive_letter = "C:" }]
+
+  routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
+  actions_enabled    = var.cloudwatch_alarms_enabled
+
+  tags = var.tags
+}
+
 module "ssm_session_access" {
   source = "../../modules/ssm-session-access-policy"
 
@@ -200,6 +218,24 @@ module "dc2" {
   tags = merge(var.tags, {
     daily_backups = "true"
   })
+}
+
+module "dc2_alarms" {
+  source = "../../modules/instance-alarms"
+
+  environment   = "ad"
+  instance_name = "dc2"
+  instance_id   = module.dc2.instance_id
+  image_id      = module.dc2.ami_id
+  instance_type = module.dc2.instance_type
+  os_family     = "windows"
+  disks         = [{ drive_letter = "C:" }]
+
+  routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
+  actions_enabled    = var.cloudwatch_alarms_enabled
+
+  tags = var.tags
 }
 
 module "backup" {
@@ -247,3 +283,42 @@ resource "aws_ssm_association" "cloudwatch_agent" {
   depends_on = [aws_iam_role_policy_attachment.cloudwatch_agent]
 }
 
+data "aws_caller_identity" "current" {}
+
+# Looks up the real ARN (with its random suffix) so the webhook Lambda's IAM policy matches it.
+data "aws_secretsmanager_secret" "slack_webhook" {
+  for_each = {
+    for key, channel in var.cloudwatch_alerts_notification_channels : key => channel
+    if channel.slack_webhook_secret_name != null
+  }
+
+  name = each.value.slack_webhook_secret_name
+}
+
+locals {
+  cloudwatch_alerts_notification_channels = {
+    for key, channel in var.cloudwatch_alerts_notification_channels : key => merge(channel, {
+      slack_webhook_secret_arn = (
+        channel.slack_webhook_secret_name != null
+        ? data.aws_secretsmanager_secret.slack_webhook[key].arn
+        : null
+      )
+      # Read directly by Terraform, not IAM-matched, so the suffix-less ARN is fine here.
+      pagerduty_integration_key_secret_arn = (
+        channel.pagerduty_integration_key_secret_name != null
+        ? "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${channel.pagerduty_integration_key_secret_name}"
+        : null
+      )
+    })
+  }
+}
+
+module "cloudwatch_alerts" {
+  source = "../../modules/cloudwatch-alerts"
+
+  name = "ad"
+
+  notification_channels = local.cloudwatch_alerts_notification_channels
+
+  tags = var.tags
+}
