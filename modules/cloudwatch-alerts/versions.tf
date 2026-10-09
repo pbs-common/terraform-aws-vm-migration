@@ -6,9 +6,11 @@ terraform {
       source  = "hashicorp/aws"
       version = "6.62.0"
     }
-    archive = {
-      source  = "hashicorp/archive"
-      version = "2.7.1"
+    # For the local-exec provisioner that zips and uploads the webhook forwarder
+    # Lambda's code during apply.
+    null = {
+      source  = "hashicorp/null"
+      version = "3.2.4"
     }
   }
 }

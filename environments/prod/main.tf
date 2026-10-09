@@ -79,6 +79,10 @@ module "cloudwatch_alerts" {
 
   notification_channels = local.cloudwatch_alerts_notification_channels
 
+  # Same bucket as this account's Terraform state. terraform apply zips and uploads the
+  # webhook forwarder Lambda's code here itself (see modules/cloudwatch-alerts/main.tf).
+  lambda_artifact_s3_bucket = "pbs-prod-terraform-state"
+
   tags = var.tags
 }
 

@@ -79,6 +79,26 @@ variable "lambda_log_retention_days" {
   default     = 14
 }
 
+variable "lambda_artifact_s3_bucket" {
+  description = "S3 bucket holding the webhook forwarder Lambda's deployment package, zipped and uploaded during apply. Only required if a channel sets a Slack or Teams webhook."
+  type        = string
+  default     = null
+
+  validation {
+    condition = var.lambda_artifact_s3_bucket != null || !anytrue([
+      for channel in var.notification_channels :
+      channel.topic_arn == null && (channel.slack_webhook_secret_arn != null || channel.teams_webhook_secret_arn != null)
+    ])
+    error_message = "lambda_artifact_s3_bucket is required when a notification channel sets a Slack or Teams webhook."
+  }
+}
+
+variable "lambda_artifact_s3_prefix" {
+  description = "S3 key prefix for the webhook forwarder Lambda's deployment package in lambda_artifact_s3_bucket. The actual key is content-addressed (the source hash is appended) so concurrent runs for different commits never overwrite each other's upload."
+  type        = string
+  default     = "cloudwatch-alerts"
+}
+
 variable "tags" {
   description = "Tags applied to resources, merged with an automatic Name tag."
   type        = map(string)

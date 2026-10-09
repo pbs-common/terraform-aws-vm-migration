@@ -91,7 +91,9 @@ jobs:
   # manual dispatch from main. Reaching this job does not apply anything:
   # terraform-apply.yaml declares `environment: staging`, whose required reviewers hold it at
   # "Waiting" until someone approves. Pull requests never reach it -- on a PR the ref is
-  # refs/pull/<n>/merge, never refs/heads/main.
+  # refs/pull/<n>/merge, never refs/heads/main. Terraform itself zips and uploads the
+  # webhook forwarder Lambda's code during this step (see modules/cloudwatch-alerts/main.tf) --
+  # no separate build job, so no second approval gate on top of this one.
   apply-staging:
     name: Apply Staging Environment
     needs: plan-staging
