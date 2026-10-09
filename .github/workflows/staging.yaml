@@ -74,10 +74,14 @@ jobs:
   # 2026-10-09 (ad/staging/prod all partially applied, Lambda creation failed). Uploading
   # here means plan and apply only ever reference an S3 key, never a local file. Reuses
   # this account's own state bucket - the OIDC role already has full access to it.
+  # `environment: staging` is required here, same as plan/apply - OIDC_ROLE_ARN is an
+  # environment-scoped secret, invisible to a job that doesn't declare it. Confirmed by
+  # the first version of this job failing with an empty role-to-assume.
   build-webhook-forwarder-staging:
     name: Build Webhook Forwarder Lambda
     needs: validate-staging
     runs-on: ubuntu-latest
+    environment: staging
     steps:
       - name: Checkout
         uses: actions/checkout@v7
