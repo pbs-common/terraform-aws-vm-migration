@@ -94,9 +94,9 @@ resource "aws_iam_role_policy" "config_recorder_s3" {
 }
 
 resource "aws_config_configuration_recorder" "main" {
-  count      = local.recorder_exists ? 0 : 1
-  name       = "${var.rule_name}-recorder"
-  role_arn   = aws_iam_role.config_recorder[0].arn
+  count    = local.recorder_exists ? 0 : 1
+  name     = "${var.rule_name}-recorder"
+  role_arn = aws_iam_role.config_recorder[0].arn
   recording_group {
     all_supported = true
   }
