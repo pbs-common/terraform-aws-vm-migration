@@ -116,7 +116,13 @@ resource "null_resource" "webhook_forwarder_upload" {
   }
 
   provisioner "local-exec" {
-    command = "cd ${path.module}/lambda && zip -o webhook_forwarder.zip webhook_forwarder.py && aws s3 cp webhook_forwarder.zip s3://${var.lambda_artifact_s3_bucket}/${local.webhook_forwarder_s3_key}"
+    # Bucket/key go through env vars, not direct interpolation, so a prefix with a
+    # space or shell character in it can't break or inject into the command.
+    environment = {
+      S3_BUCKET = var.lambda_artifact_s3_bucket
+      S3_KEY    = local.webhook_forwarder_s3_key
+    }
+    command = "cd ${path.module}/lambda && zip -o webhook_forwarder.zip webhook_forwarder.py && aws s3 cp webhook_forwarder.zip \"s3://$S3_BUCKET/$S3_KEY\""
   }
 }
 
