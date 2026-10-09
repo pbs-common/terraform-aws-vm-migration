@@ -240,3 +240,8 @@ import {
   to = aws_instance.s_sbap01_dat1_x
   id = "i-04bc18689d5d8a9c5"
 }
+
+module "config" {
+  source = "./modules/config"
+  alert_email = "billy.mclean@protagona.com"
+}
