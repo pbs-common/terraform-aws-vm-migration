@@ -159,8 +159,9 @@ Key behaviours:
   applied.
 - **The approval gate is the GitHub Environment's protection rules.** There is no in-workflow
   approval step.
-- **Runs are serialized per environment** (`concurrency` with `cancel-in-progress: false`) so a
-  cancelled apply cannot strand the S3 state lock.
+- **Runs on the same Git ref are serialized per environment** (`concurrency` with
+  `cancel-in-progress: false`), so a newer run on that ref does not cancel an in-progress apply
+  and risk stranding the S3 state lock. Runs on different refs may overlap.
 
 ### CI coverage
 
