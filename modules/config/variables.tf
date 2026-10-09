@@ -3,6 +3,12 @@ variable "alert_email" {
   type        = string
 }
 
+variable "create_recorder" {
+  description = "Whether to create the AWS Config recorder and delivery channel. Set to false if already configured in your account."
+  type        = bool
+  default     = true
+}
+
 variable "rule_name" {
   description = "Name of the AWS Config rule and related resources."
   type        = string

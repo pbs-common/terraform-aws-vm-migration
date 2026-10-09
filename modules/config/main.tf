@@ -3,24 +3,17 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
-# Check if a Config recorder already exists in this region
-data "aws_config_configuration_recorders" "existing" {}
-
-locals {
-  recorder_exists = length(data.aws_config_configuration_recorders.existing.ids) > 0
-}
-
 # ---------------------------------------------------------------------------
-# AWS Config Recorder & Delivery Channel (created only if none exist)
+# AWS Config Recorder & Delivery Channel (created only if create_recorder = true)
 # ---------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "config" {
-  count  = local.recorder_exists ? 0 : 1
+  count  = var.create_recorder ? 1 : 0
   bucket = "${var.config_bucket_name_prefix}-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}"
 }
 
 resource "aws_s3_bucket_versioning" "config" {
-  count  = local.recorder_exists ? 0 : 1
+  count  = var.create_recorder ? 1 : 0
   bucket = aws_s3_bucket.config[0].id
 
   versioning_configuration {
@@ -29,7 +22,7 @@ resource "aws_s3_bucket_versioning" "config" {
 }
 
 resource "aws_s3_bucket_policy" "config" {
-  count  = local.recorder_exists ? 0 : 1
+  count  = var.create_recorder ? 1 : 0
   bucket = aws_s3_bucket.config[0].id
 
   policy = jsonencode({
@@ -52,7 +45,7 @@ resource "aws_s3_bucket_policy" "config" {
 }
 
 resource "aws_iam_role" "config_recorder" {
-  count = local.recorder_exists ? 0 : 1
+  count = var.create_recorder ? 1 : 0
   name  = "${var.rule_name}-recorder"
 
   assume_role_policy = jsonencode({
@@ -66,13 +59,13 @@ resource "aws_iam_role" "config_recorder" {
 }
 
 resource "aws_iam_role_policy_attachment" "config_recorder" {
-  count      = local.recorder_exists ? 0 : 1
+  count      = var.create_recorder ? 1 : 0
   role       = aws_iam_role.config_recorder[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/ConfigRole"
 }
 
 resource "aws_iam_role_policy" "config_recorder_s3" {
-  count = local.recorder_exists ? 0 : 1
+  count = var.create_recorder ? 1 : 0
   name  = "${var.rule_name}-recorder-s3"
   role  = aws_iam_role.config_recorder[0].id
 
@@ -95,7 +88,7 @@ resource "aws_iam_role_policy" "config_recorder_s3" {
 }
 
 resource "aws_config_configuration_recorder" "main" {
-  count    = local.recorder_exists ? 0 : 1
+  count      = var.create_recorder ? 1 : 0
   name     = "${var.rule_name}-recorder"
   role_arn = aws_iam_role.config_recorder[0].arn
   recording_group {
@@ -106,7 +99,7 @@ resource "aws_config_configuration_recorder" "main" {
 }
 
 resource "aws_config_delivery_channel" "main" {
-  count          = local.recorder_exists ? 0 : 1
+  count          = var.create_recorder ? 1 : 0
   name           = "${var.rule_name}-channel"
   s3_bucket_name = aws_s3_bucket.config[0].id
 
@@ -118,7 +111,7 @@ resource "aws_config_delivery_channel" "main" {
 }
 
 resource "aws_config_configuration_recorder_status" "main" {
-  count      = local.recorder_exists ? 0 : 1
+  count      = var.create_recorder ? 1 : 0
   name       = aws_config_configuration_recorder.main[0].name
   is_enabled = true
   depends_on = [aws_config_delivery_channel.main]
