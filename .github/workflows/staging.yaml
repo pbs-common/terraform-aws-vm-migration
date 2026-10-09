@@ -22,6 +22,8 @@ on:
       # one is absent.
       - "environments/staging/**"
       - "modules/backup/**"
+      - "modules/cloudwatch-alerts/**"
+      - "modules/instance-alarms/**"
       # Shared inputs that change what this pipeline DOES. Without them a PR editing the
       # lint config or the reusable workflow runs no plan and no tflint, so the change to
       # the checking itself is never exercised by the thing it checks.
@@ -36,6 +38,8 @@ on:
     paths:
       - "environments/staging/**"
       - "modules/backup/**"
+      - "modules/cloudwatch-alerts/**"
+      - "modules/instance-alarms/**"
       - ".tflint.hcl"
       - ".github/workflows/**"
 
@@ -87,7 +91,9 @@ jobs:
   # manual dispatch from main. Reaching this job does not apply anything:
   # terraform-apply.yaml declares `environment: staging`, whose required reviewers hold it at
   # "Waiting" until someone approves. Pull requests never reach it -- on a PR the ref is
-  # refs/pull/<n>/merge, never refs/heads/main.
+  # refs/pull/<n>/merge, never refs/heads/main. Terraform itself zips and uploads the
+  # webhook forwarder Lambda's code during this step (see modules/cloudwatch-alerts/main.tf) --
+  # no separate build job, so no second approval gate on top of this one.
   apply-staging:
     name: Apply Staging Environment
     needs: plan-staging

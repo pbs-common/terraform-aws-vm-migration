@@ -50,3 +50,22 @@ variable "tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "cloudwatch_alerts_notification_channels" {
+  description = "Notification channels for prod CloudWatch alerts, like \"routine\" or \"critical\". See modules/cloudwatch-alerts/variables.tf for the object shape."
+  type = map(object({
+    email_subscriptions                   = optional(list(string), [])
+    sms_subscriptions                     = optional(list(string), [])
+    slack_webhook_secret_name             = optional(string)
+    teams_webhook_secret_arn              = optional(string)
+    pagerduty_integration_key_secret_name = optional(string)
+    topic_arn                             = optional(string)
+  }))
+  default = {}
+}
+
+variable "cloudwatch_alarms_enabled" {
+  description = "Whether CloudWatch alarms notify on state change. Set false for an initial rollout so alarms settle into real state without firing, then flip to true once verified."
+  type        = bool
+  default     = false
+}
