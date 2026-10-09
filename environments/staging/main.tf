@@ -44,18 +44,28 @@ resource "aws_ssm_association" "cloudwatch_agent" {
 
 data "aws_caller_identity" "current" {}
 
+# Looks up the real ARN (with its random suffix) so the webhook Lambda's IAM policy matches it.
+data "aws_secretsmanager_secret" "slack_webhook" {
+  for_each = {
+    for key, channel in var.cloudwatch_alerts_notification_channels : key => channel
+    if channel.slack_webhook_secret_name != null
+  }
+
+  name = each.value.slack_webhook_secret_name
+}
+
 locals {
   # Hold notifications until alarms settle after the first real apply.
   cloudwatch_alarms_enabled = false
 
-  # Builds the full secret ARN from the current account.
   cloudwatch_alerts_notification_channels = {
     for key, channel in var.cloudwatch_alerts_notification_channels : key => merge(channel, {
       slack_webhook_secret_arn = (
         channel.slack_webhook_secret_name != null
-        ? "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${channel.slack_webhook_secret_name}"
+        ? data.aws_secretsmanager_secret.slack_webhook[key].arn
         : null
       )
+      # Read directly by Terraform, not IAM-matched, so the suffix-less ARN is fine here.
       pagerduty_integration_key_secret_arn = (
         channel.pagerduty_integration_key_secret_name != null
         ? "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${channel.pagerduty_integration_key_secret_name}"

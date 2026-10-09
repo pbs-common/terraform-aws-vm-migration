@@ -91,7 +91,7 @@ resource "aws_instance" "i_ng_ws_zc_t1_l" {
 
 import {
   to = aws_instance.i_ng_ws_zc_t1_l
-  id = "ngws-zc"
+  id = "i-03d447ddfcf97efe7"
 }
 
 module "ngws_zc_alarms" {
@@ -140,7 +140,7 @@ resource "aws_instance" "s_ghsd01_dat1_w" {
 
 import {
   to = aws_instance.s_ghsd01_dat1_w
-  id = "ghsd01"
+  id = "i-062c6c56e0ea43a52"
 }
 
 module "ghsd01_alarms" {
@@ -189,7 +189,7 @@ resource "aws_instance" "s_sits01_dat1_x" {
 
 import {
   to = aws_instance.s_sits01_dat1_x
-  id = "sits01"
+  id = "i-0f15f3836d730abb6"
 }
 
 module "sits01_alarms" {
@@ -241,7 +241,7 @@ resource "aws_instance" "i_ng_ws_sm_t1_w" {
 
 import {
   to = aws_instance.i_ng_ws_sm_t1_w
-  id = "ngws-sm"
+  id = "i-03cd76dd517b2efb6"
 }
 
 module "ngws_sm_alarms" {
@@ -290,7 +290,7 @@ resource "aws_instance" "i_ng_ws_bb_t1_w" {
 
 import {
   to = aws_instance.i_ng_ws_bb_t1_w
-  id = "ngws-bb"
+  id = "i-037e76172f90efc2d"
 }
 
 module "ngws_bb_alarms" {
@@ -339,7 +339,7 @@ resource "aws_instance" "i_ng_ws_kt_t1_w" {
 
 import {
   to = aws_instance.i_ng_ws_kt_t1_w
-  id = "ngws-kt"
+  id = "i-05358ac8ae6ae3398"
 }
 
 module "ngws_kt_alarms" {
@@ -388,7 +388,7 @@ resource "aws_instance" "devops_app1_dev" {
 
 import {
   to = aws_instance.devops_app1_dev
-  id = "devops-app1-dev"
+  id = "i-0d9ab8addd6e1a4db"
 }
 
 module "devops_app1_dev_alarms" {
@@ -437,7 +437,7 @@ resource "aws_instance" "esdev_brian" {
 
 import {
   to = aws_instance.esdev_brian
-  id = "esdev-brian"
+  id = "i-0e71029bbc740a4b2"
 }
 
 module "esdev_brian_alarms" {
@@ -490,7 +490,7 @@ resource "aws_instance" "esdev_chex" {
 
 import {
   to = aws_instance.esdev_chex
-  id = "esdev-chex"
+  id = "i-02913429a0e270b18"
 }
 
 module "esdev_chex_alarms" {
@@ -539,7 +539,7 @@ resource "aws_instance" "s_si_d1_t1_w" {
 
 import {
   to = aws_instance.s_si_d1_t1_w
-  id = "sid1"
+  id = "i-00c1e14ce9114b57c"
 }
 
 module "sid1_alarms" {
@@ -582,7 +582,7 @@ resource "aws_instance" "s_ghsd04_dat1_x" {
 
 import {
   to = aws_instance.s_ghsd04_dat1_x
-  id = "ghsd04"
+  id = "i-031ddd298cf491c67"
 }
 
 module "ghsd04_alarms" {
@@ -625,7 +625,7 @@ resource "aws_instance" "esdev_10" {
 
 import {
   to = aws_instance.esdev_10
-  id = "esdev10"
+  id = "i-0745c6a50a22b3970"
 }
 
 module "esdev10_alarms" {
@@ -674,7 +674,7 @@ resource "aws_instance" "i_ng_ws_mr_t1_w" {
 
 import {
   to = aws_instance.i_ng_ws_mr_t1_w
-  id = "ngws-mr"
+  id = "i-0882b12d32667c7ee"
 }
 
 module "ngws_mr_alarms" {
@@ -723,7 +723,7 @@ resource "aws_instance" "i_ng_ws_ld_t1_w" {
 
 import {
   to = aws_instance.i_ng_ws_ld_t1_w
-  id = "ngws-ld"
+  id = "i-069a3f4cdaec8c82a"
 }
 
 module "ngws_ld_alarms" {
@@ -766,7 +766,7 @@ resource "aws_instance" "esdev_12" {
 
 import {
   to = aws_instance.esdev_12
-  id = "esdev12"
+  id = "i-078edb8241c6df4f2"
 }
 
 module "esdev12_alarms" {
@@ -813,7 +813,7 @@ resource "aws_instance" "esdev_08" {
 
 import {
   to = aws_instance.esdev_08
-  id = "esdev08"
+  id = "i-0c2fd56636c99ff1d"
 }
 
 module "esdev08_alarms" {

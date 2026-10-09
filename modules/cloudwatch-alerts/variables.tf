@@ -49,6 +49,22 @@ variable "notification_channels" {
     topic_arn                            = optional(string)
   }))
   default = {}
+
+  validation {
+    # Keys feed derived names like "${var.name}-${key}-webhook-forwarder" (IAM role/Lambda
+    # name, 64-char limit) - same character set as name, and short enough to fit.
+    condition = alltrue([
+      for key in keys(var.notification_channels) : can(regex("^[A-Za-z0-9_-]+$", key))
+    ])
+    error_message = "Each notification channel key must be letters, numbers, underscores, or hyphens."
+  }
+
+  validation {
+    condition = alltrue([
+      for key in keys(var.notification_channels) : length(var.name) + length(key) <= 45
+    ])
+    error_message = "name plus each channel key must be 45 characters or less (derived names add a fixed 19-character suffix, capped at 64)."
+  }
 }
 
 variable "sns_kms_key_arn" {

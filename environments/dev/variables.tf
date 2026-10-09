@@ -52,14 +52,12 @@ variable "tags" {
 }
 
 variable "cloudwatch_alerts_notification_channels" {
-  description = "Notification channels for dev CloudWatch alerts, like \"routine\" or \"critical\". See modules/cloudwatch-alerts/variables.tf for the object shape."
+  description = "Notification channels for dev CloudWatch alerts, like \"routine\" or \"critical\". See modules/cloudwatch-alerts/variables.tf for the object shape. dev is email-only - no Slack/PagerDuty fields, since this passes straight into the module with no name-to-ARN step to support them."
   type = map(object({
-    email_subscriptions                   = optional(list(string), [])
-    sms_subscriptions                     = optional(list(string), [])
-    slack_webhook_secret_name             = optional(string)
-    teams_webhook_secret_arn              = optional(string)
-    pagerduty_integration_key_secret_name = optional(string)
-    topic_arn                             = optional(string)
+    email_subscriptions      = optional(list(string), [])
+    sms_subscriptions        = optional(list(string), [])
+    teams_webhook_secret_arn = optional(string)
+    topic_arn                = optional(string)
   }))
   default = {}
 }
