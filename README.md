@@ -136,13 +136,14 @@ pinned to a commit SHA.
 ```mermaid
 flowchart TD
     T{"Trigger<br/>PR / push to main / manual"} --> V["validate<br/>terraform fmt -check"]
-    V --> P["plan<br/>OIDC assume role, tflint, init,<br/>validate, plan -out=tfplan"]
+    V --> PGATE{"GitHub Environment<br/>plan protection rules"}
+    PGATE -->|Approved| P["plan<br/>OIDC assume role, tflint, init,<br/>validate, plan -out=tfplan"]
     P --> C["Plan posted as PR comment<br/>(pull_request only)"]
     P --> U["tfplan uploaded as artifact<br/>(7 day retention)"]
     U --> Q{"main branch and<br/>push or manual?"}
     Q -->|No| E[Stop]
-    Q -->|Yes| GATE{"GitHub Environment<br/>required reviewers"}
-    GATE -->|Approved| A["apply<br/>terraform apply tfplan<br/>(saved plan, no re-plan)"]
+    Q -->|Yes| AGATE{"GitHub Environment<br/>apply protection rules"}
+    AGATE -->|Approved| A["apply<br/>terraform apply tfplan<br/>(saved plan, no re-plan)"]
 ```
 
 | Event | What runs |
