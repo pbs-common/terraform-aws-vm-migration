@@ -20,8 +20,8 @@ module "cloudwatch_alerts" {
     }
   }
 
-  # Only needed if any channel sets a Slack/Teams webhook - a CI step uploads the
-  # forwarder Lambda's zip here before plan/apply run (see .github/workflows/ad.yaml).
+  # Only needed if any channel sets a Slack/Teams webhook - terraform apply zips and
+  # uploads the forwarder Lambda's code here itself (see modules/cloudwatch-alerts/main.tf).
   lambda_artifact_s3_bucket = "pbs-ad-ds-terraform-state"
 
   tags = {
@@ -35,7 +35,7 @@ module "cloudwatch_alerts" {
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
 | name | Name prefix for every resource this module creates, usually the environment name like "dev" or "prod". Keep it short (24 chars max): derived names add a channel key plus a suffix, and IAM role names cap at 64 characters. | `string` | n/a | yes |
-| lambda_artifact_s3_bucket | S3 bucket holding the webhook forwarder Lambda's deployment package, uploaded by a CI step before plan/apply run. Only required if a channel sets a Slack or Teams webhook. | `string` | `null` | no |
+| lambda_artifact_s3_bucket | S3 bucket holding the webhook forwarder Lambda's deployment package, zipped and uploaded during apply. Only required if a channel sets a Slack or Teams webhook. | `string` | `null` | no |
 | lambda_artifact_s3_prefix | S3 key prefix for the webhook forwarder Lambda's deployment package in `lambda_artifact_s3_bucket`. The actual key is content-addressed (the source hash is appended), so concurrent runs for different commits never overwrite each other's upload. | `string` | `"cloudwatch-alerts"` | no |
 | lambda_log_retention_days | Log retention, in days, for each webhook forwarder Lambda. Only matters for channels with a Slack or Teams webhook set. | `number` | `14` | no |
 | notification_channels | Named notification channels, like "routine" or "critical", each its own SNS topic with its own subscriptions. Lets alarms route to different channels instead of notifying everyone every time. Per channel: `email_subscriptions` - email addresses subscribed directly, each confirms via the link AWS emails before alerts start. `sms_subscriptions` - phone numbers subscribed directly. `slack_webhook_secret_arn` - ARN of a Secrets Manager secret holding the Slack webhook URL, read by the Lambda forwarder at invoke time so the URL never touches Terraform state. `teams_webhook_secret_arn` - same, for Microsoft Teams. `pagerduty_integration_key_secret_arn` - ARN of a Secrets Manager secret holding the PagerDuty integration key, read at plan time and embedded directly in the SNS subscription endpoint (so unlike the webhook secrets, this one does end up in Terraform state). `topic_arn` - ARN of an existing SNS topic to reuse instead of creating one; when set, this module skips creating a topic and skips managing any subscriptions on it. | `map(object({...}))` | `{}` | no |

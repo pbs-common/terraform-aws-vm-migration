@@ -74,41 +74,7 @@ jobs:
       working_directory: environments/ad
       runs_on: ubuntu-latest
 
-  # Step 2: Build and upload the webhook forwarder Lambda's deployment package to S3,
-  # independent of terraform plan/apply. Plan and apply run as separate jobs on separate
-  # runners, so a zip built locally during plan (the old approach, a local archive_file)
-  # never exists when apply's fresh checkout runs -- confirmed broken this way on
-  # 2026-10-09 (ad/staging/prod all partially applied, Lambda creation failed). Uploading
-  # here means plan and apply only ever reference an S3 key, never a local file. Reuses
-  # this account's own state bucket - the OIDC role already has full access to it. The
-  # key includes the source hash, computed the same way Terraform does, so concurrent
-  # runs for different commits never overwrite each other's upload.
-  # `environment: ad` is required here, same as plan/apply - OIDC_ROLE_ARN is an
-  # environment-scoped secret, invisible to a job that doesn't declare it. Confirmed by
-  # the first version of this job failing with an empty role-to-assume.
-  build-webhook-forwarder-ad:
-    name: Build Webhook Forwarder Lambda
-    needs: validate-ad
-    runs-on: ubuntu-latest
-    environment: ad
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Configure AWS credentials (OIDC)
-        uses: aws-actions/configure-aws-credentials@v6.2.3
-        with:
-          role-to-assume: ${{ secrets.OIDC_ROLE_ARN }}
-          aws-region: us-east-1
-
-      - name: Zip and upload to S3
-        working-directory: modules/cloudwatch-alerts/lambda
-        run: |
-          zip webhook_forwarder.zip webhook_forwarder.py
-          hash=$(sha256sum webhook_forwarder.py | cut -d' ' -f1)
-          aws s3 cp webhook_forwarder.zip "s3://pbs-ad-ds-terraform-state/cloudwatch-alerts/webhook_forwarder-${hash}.zip"
-
-  # Step 3: Plan Terraform changes. Unconditional on purpose -- it runs for every trigger
+  # Step 2: Plan Terraform changes. Unconditional on purpose -- it runs for every trigger
   # this workflow declares. The tfplan artifact it uploads is what apply-ad consumes.
   plan-ad:
     name: Plan AD Environment
@@ -128,15 +94,16 @@ jobs:
       OIDC_ROLE_ARN: ${{ secrets.OIDC_ROLE_ARN }}
       TF_VAR_EXTRAS: ${{ secrets.TF_VAR_EXTRAS }}
 
-  # Step 4: Apply the plan artifact produced by plan-ad in THIS run. Merge to main, or a
+  # Step 3: Apply the plan artifact produced by plan-ad in THIS run. Merge to main, or a
   # manual dispatch from main. Reaching this job does not apply anything:
   # terraform-apply.yaml declares `environment: ad`, whose required reviewers hold it at
   # "Waiting" until someone approves. Pull requests never reach it -- on a PR the ref is
-  # refs/pull/<n>/merge, never refs/heads/main. Needs build-webhook-forwarder-ad too, so
-  # the Lambda zip is already in S3 by the time this actually applies.
+  # refs/pull/<n>/merge, never refs/heads/main. Terraform itself zips and uploads the
+  # webhook forwarder Lambda's code during this step (see modules/cloudwatch-alerts/main.tf) --
+  # no separate build job, so no second approval gate on top of this one.
   apply-ad:
     name: Apply AD Environment
-    needs: [plan-ad, build-webhook-forwarder-ad]
+    needs: plan-ad
     uses: pbs-common/terraform-aws-shared-ghpipeline/.github/workflows/terraform-apply.yaml@6508cefe56f5aaefac031c1382dad73c1d698b2c
     if: >-
       github.ref == 'refs/heads/main' &&

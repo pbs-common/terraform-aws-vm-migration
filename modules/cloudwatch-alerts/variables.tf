@@ -80,7 +80,7 @@ variable "lambda_log_retention_days" {
 }
 
 variable "lambda_artifact_s3_bucket" {
-  description = "S3 bucket holding the webhook forwarder Lambda's deployment package, uploaded by a CI step before plan/apply run. Only required if a channel sets a Slack or Teams webhook."
+  description = "S3 bucket holding the webhook forwarder Lambda's deployment package, zipped and uploaded during apply. Only required if a channel sets a Slack or Teams webhook."
   type        = string
   default     = null
 }

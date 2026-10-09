@@ -90,16 +90,31 @@ resource "aws_sns_topic_subscription" "pagerduty" {
 # their own JSON shape, not the raw SNS envelope. Each channel with a webhook gets its
 # own Lambda forwarder, subscribed to that channel's topic, to reshape and send it.
 #
-# Code comes from S3, not a local zip built here: plan and apply run as separate CI jobs
-# on separate runners, so a zip built locally during plan never exists when apply runs.
-# A CI step zips and uploads lambda/webhook_forwarder.py to S3 before plan/apply run, to
-# a content-addressed key (computed the same way below) so two commits' builds - even
-# from concurrent runs on different branches - never overwrite each other's upload. The
-# hash reads the committed source directly, which is always present on any checkout.
+# Code comes from S3, zipped and uploaded by the null_resource below, during apply - not
+# a local archive_file. Plan and apply run as separate CI jobs on separate runners, so a
+# zip built during plan never exists when apply's fresh checkout runs. Doing the zip/
+# upload inside apply itself avoids that, and avoids a separate CI job needing its own
+# approval gate for ad/staging/prod on top of apply's. The key is content-addressed
+# (source hash appended) so concurrent runs for different commits never overwrite each
+# other's upload.
 locals {
   webhook_forwarder_source_hash     = filebase64sha256("${path.module}/lambda/webhook_forwarder.py")
   webhook_forwarder_source_hash_hex = filesha256("${path.module}/lambda/webhook_forwarder.py")
   webhook_forwarder_s3_key          = "${var.lambda_artifact_s3_prefix}/webhook_forwarder-${local.webhook_forwarder_source_hash_hex}.zip"
+}
+
+resource "null_resource" "webhook_forwarder_upload" {
+  # Only needed when some channel actually has a Lambda to upload.
+  for_each = length(local.channels_with_webhook) > 0 ? { once = true } : {}
+
+  # Re-runs only when the source changes, same as archive_file's old behavior.
+  triggers = {
+    source_hash = local.webhook_forwarder_source_hash_hex
+  }
+
+  provisioner "local-exec" {
+    command = "cd ${path.module}/lambda && zip -o webhook_forwarder.zip webhook_forwarder.py && aws s3 cp webhook_forwarder.zip s3://${var.lambda_artifact_s3_bucket}/${local.webhook_forwarder_s3_key}"
+  }
 }
 
 resource "aws_iam_role" "webhook_forwarder" {
@@ -179,6 +194,7 @@ resource "aws_lambda_function" "webhook_forwarder" {
     aws_cloudwatch_log_group.webhook_forwarder,
     aws_iam_role_policy_attachment.webhook_forwarder_logs,
     aws_iam_role_policy.webhook_forwarder_secrets,
+    null_resource.webhook_forwarder_upload,
   ]
 
   tags = merge(var.tags, { Name = "${var.name}-${each.key}-webhook-forwarder" })
