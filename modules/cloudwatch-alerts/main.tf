@@ -107,9 +107,12 @@ resource "null_resource" "webhook_forwarder_upload" {
   # Only needed when some channel actually has a Lambda to upload.
   for_each = length(local.channels_with_webhook) > 0 ? { once = true } : {}
 
-  # Re-runs only when the source changes, same as archive_file's old behavior.
+  # Re-runs when the source changes (same as archive_file's old behavior) or when the
+  # destination changes - otherwise a bucket/prefix edit alone would leave the Lambda
+  # pointing at a key nothing ever uploaded to.
   triggers = {
-    source_hash = local.webhook_forwarder_source_hash_hex
+    s3_bucket = var.lambda_artifact_s3_bucket
+    s3_key    = local.webhook_forwarder_s3_key
   }
 
   provisioner "local-exec" {
