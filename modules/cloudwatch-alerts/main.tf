@@ -92,11 +92,14 @@ resource "aws_sns_topic_subscription" "pagerduty" {
 #
 # Code comes from S3, not a local zip built here: plan and apply run as separate CI jobs
 # on separate runners, so a zip built locally during plan never exists when apply runs.
-# A CI step zips and uploads lambda/webhook_forwarder.py to S3 before plan/apply run.
-# The hash below reads the committed source directly, which is always present on any
-# checkout, so Terraform still redeploys exactly when the code actually changes.
+# A CI step zips and uploads lambda/webhook_forwarder.py to S3 before plan/apply run, to
+# a content-addressed key (computed the same way below) so two commits' builds - even
+# from concurrent runs on different branches - never overwrite each other's upload. The
+# hash reads the committed source directly, which is always present on any checkout.
 locals {
-  webhook_forwarder_source_hash = filebase64sha256("${path.module}/lambda/webhook_forwarder.py")
+  webhook_forwarder_source_hash     = filebase64sha256("${path.module}/lambda/webhook_forwarder.py")
+  webhook_forwarder_source_hash_hex = filesha256("${path.module}/lambda/webhook_forwarder.py")
+  webhook_forwarder_s3_key          = "${var.lambda_artifact_s3_prefix}/webhook_forwarder-${local.webhook_forwarder_source_hash_hex}.zip"
 }
 
 resource "aws_iam_role" "webhook_forwarder" {
@@ -160,7 +163,7 @@ resource "aws_lambda_function" "webhook_forwarder" {
   # fetch, cold start, or a multi-record batch.
   timeout          = 30
   s3_bucket        = var.lambda_artifact_s3_bucket
-  s3_key           = var.lambda_artifact_s3_key
+  s3_key           = local.webhook_forwarder_s3_key
   source_code_hash = local.webhook_forwarder_source_hash
 
   environment {

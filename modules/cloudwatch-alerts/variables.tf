@@ -85,10 +85,10 @@ variable "lambda_artifact_s3_bucket" {
   default     = null
 }
 
-variable "lambda_artifact_s3_key" {
-  description = "S3 key of the webhook forwarder Lambda's deployment package in lambda_artifact_s3_bucket."
+variable "lambda_artifact_s3_prefix" {
+  description = "S3 key prefix for the webhook forwarder Lambda's deployment package in lambda_artifact_s3_bucket. The actual key is content-addressed (the source hash is appended) so concurrent runs for different commits never overwrite each other's upload."
   type        = string
-  default     = "cloudwatch-alerts/webhook_forwarder.zip"
+  default     = "cloudwatch-alerts"
 }
 
 variable "tags" {

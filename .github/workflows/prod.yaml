@@ -73,7 +73,9 @@ jobs:
   # never exists when apply's fresh checkout runs -- confirmed broken this way on
   # 2026-10-09 (ad/staging/prod all partially applied, Lambda creation failed). Uploading
   # here means plan and apply only ever reference an S3 key, never a local file. Reuses
-  # this account's own state bucket - the OIDC role already has full access to it.
+  # this account's own state bucket - the OIDC role already has full access to it. The
+  # key includes the source hash, computed the same way Terraform does, so concurrent
+  # runs for different commits never overwrite each other's upload.
   # `environment: prod` is required here, same as plan/apply - OIDC_ROLE_ARN is an
   # environment-scoped secret, invisible to a job that doesn't declare it. Confirmed by
   # the first version of this job failing with an empty role-to-assume.
@@ -96,7 +98,8 @@ jobs:
         working-directory: modules/cloudwatch-alerts/lambda
         run: |
           zip webhook_forwarder.zip webhook_forwarder.py
-          aws s3 cp webhook_forwarder.zip s3://pbs-prod-terraform-state/cloudwatch-alerts/webhook_forwarder.zip
+          hash=$(sha256sum webhook_forwarder.py | cut -d' ' -f1)
+          aws s3 cp webhook_forwarder.zip "s3://pbs-prod-terraform-state/cloudwatch-alerts/webhook_forwarder-${hash}.zip"
 
   # Step 3: Plan Terraform changes. Unconditional on purpose -- it runs for every trigger
   # this workflow declares. The tfplan artifact it uploads is what apply-prod consumes.
