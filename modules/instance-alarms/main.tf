@@ -182,8 +182,10 @@ resource "null_resource" "procstat_cleanup" {
   }
 
   provisioner "local-exec" {
-    when    = destroy
-    command = "aws ssm send-command --instance-ids ${self.triggers.instance_id} --document-name AmazonCloudWatch-ManageAgent --parameters action='configure (remove)',mode=ec2,optionalConfigurationSource=ssm,optionalConfigurationLocation=${self.triggers.param_name},optionalRestart=yes"
+    when = destroy
+    # send-command only confirms queuing, not completion. Wait for it, so the
+    # parameter isn't deleted before the instance actually runs the removal.
+    command = "CMD_ID=$(aws ssm send-command --instance-ids ${self.triggers.instance_id} --document-name AmazonCloudWatch-ManageAgent --parameters action='configure (remove)',mode=ec2,optionalConfigurationSource=ssm,optionalConfigurationLocation=${self.triggers.param_name},optionalRestart=yes --query 'Command.CommandId' --output text) && aws ssm wait command-executed --command-id $CMD_ID --instance-id ${self.triggers.instance_id} || true"
   }
 }
 
