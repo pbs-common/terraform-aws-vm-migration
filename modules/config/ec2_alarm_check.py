@@ -8,8 +8,11 @@ one of its metrics has an InstanceId dimension equal to that instance.
 Metric-math alarms are inspected too.
 
 Environment variables:
-  REQUIRED_METRICS       JSON map of check -> list of acceptable metric names,
-                         e.g. {"cpu": ["CPUUtilization"], "memory": ["mem_used_percent"], ...}
+  REQUIRED_METRICS       JSON map of check -> list of metric identifiers.
+                         Each identifier is either "MetricName" (uses default
+                         namespace per check type) or "Namespace:MetricName".
+                         E.g., {"cpu": ["AWS/EC2:CPUUtilization"], 
+                                "memory": ["CWAgent:mem_used_percent"], ...}
   REQUIRE_ALARM_ACTIONS  "true" to ignore alarms that have actions disabled
                          or no alarm action configured.
 """
@@ -29,18 +32,33 @@ INSTANCE_STATES = ["pending", "running", "stopping", "stopped"]
 
 def _required_metrics():
     required = json.loads(os.environ["REQUIRED_METRICS"])
-    # metric name -> check name ("cpu", "memory", "disk")
-    return required, {m: check for check, names in required.items() for m in names}
+    # (namespace, metric_name) -> check name ("cpu", "memory", "disk")
+    metric_to_check = {}
+    for check, names in required.items():
+        for m in names:
+            # m is either "MetricName" or "Namespace:MetricName"
+            if ":" in m:
+                namespace, metric_name = m.split(":", 1)
+                metric_to_check[(namespace, metric_name)] = check
+            else:
+                # Legacy format: default namespaces based on check type
+                if check == "cpu":
+                    metric_to_check[("AWS/EC2", m)] = check
+                else:
+                    metric_to_check[("CWAgent", m)] = check
+    return required, metric_to_check
 
 
 def _metrics_in_alarm(alarm):
-    """Yield (metric_name, dimensions) for simple and metric-math alarms."""
+    """Yield (namespace, metric_name, dimensions) for simple and metric-math alarms."""
     if alarm.get("MetricName"):
-        yield alarm["MetricName"], alarm.get("Dimensions", [])
+        namespace = alarm.get("Namespace", "")
+        yield namespace, alarm["MetricName"], alarm.get("Dimensions", [])
     for query in alarm.get("Metrics", []):
         metric = query.get("MetricStat", {}).get("Metric")
         if metric:
-            yield metric["MetricName"], metric.get("Dimensions", [])
+            namespace = metric.get("Namespace", "")
+            yield namespace, metric["MetricName"], metric.get("Dimensions", [])
 
 
 def _coverage(metric_to_check, require_actions):
@@ -50,8 +68,8 @@ def _coverage(metric_to_check, require_actions):
         for alarm in page["MetricAlarms"]:
             if require_actions and not (alarm.get("ActionsEnabled") and alarm.get("AlarmActions")):
                 continue
-            for name, dims in _metrics_in_alarm(alarm):
-                check = metric_to_check.get(name)
+            for namespace, name, dims in _metrics_in_alarm(alarm):
+                check = metric_to_check.get((namespace, name))
                 if not check:
                     continue
                 for d in dims:

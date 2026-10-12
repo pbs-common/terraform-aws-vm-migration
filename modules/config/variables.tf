@@ -47,15 +47,17 @@ variable "config_snapshot_frequency" {
 
 variable "required_metrics" {
   description = <<-EOT
-    Each key is a check that every instance must pass; the list holds the metric
-    names that satisfy it. Match these to the metric names in your CloudWatch
-    agent config (defaults cover the agent's standard Linux and Windows names).
+    Each key is a check that every instance must pass; the list holds acceptable
+    metric identifiers. Metric names can be plain (e.g., "CPUUtilization") to use
+    default namespaces (AWS/EC2 for cpu, CWAgent for memory/disk), or explicitly
+    namespaced with "Namespace:MetricName" format (e.g., "AWS/EC2:CPUUtilization").
+    Match these to the metric names and namespaces in your CloudWatch agent config.
   EOT
   type        = map(list(string))
   default = {
-    cpu    = ["CPUUtilization"]
-    memory = ["mem_used_percent", "Memory % Committed Bytes In Use"]
-    disk   = ["disk_used_percent", "LogicalDisk % Free Space"]
+    cpu    = ["AWS/EC2:CPUUtilization"]
+    memory = ["CWAgent:mem_used_percent", "CWAgent:Memory % Committed Bytes In Use"]
+    disk   = ["CWAgent:disk_used_percent", "CWAgent:LogicalDisk % Free Space"]
   }
 }
 
