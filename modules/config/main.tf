@@ -279,6 +279,11 @@ resource "aws_sns_topic_policy" "alerts" {
       Principal = { Service = "events.amazonaws.com" }
       Action    = "sns:Publish"
       Resource  = aws_sns_topic.alerts.arn
+      Condition = {
+        ArnEquals = {
+          "aws:SourceArn" = aws_cloudwatch_event_rule.noncompliant.arn
+        }
+      }
     }]
   })
 }
