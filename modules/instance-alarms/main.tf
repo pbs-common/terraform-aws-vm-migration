@@ -164,6 +164,12 @@ resource "aws_ssm_association" "procstat_config" {
   }
 
   tags = var.tags
+
+  # The parameter name never changes, only its value - without this, a services edit
+  # updates the parameter but never re-runs append-config on the instance.
+  lifecycle {
+    replace_triggered_by = [aws_ssm_parameter.procstat_config[0].value]
+  }
 }
 
 # One alarm per named service. pid_count just checks for zero, not an exact count -
