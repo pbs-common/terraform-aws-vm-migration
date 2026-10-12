@@ -307,8 +307,9 @@ import {
 }
 
 module "config" {
-  source      = "../../modules/config"
-  alert_email = "billy.mclean@protagona.com"
+  source          = "../../modules/config"
+  alert_email     = "billy.mclean@protagona.com"
+  create_recorder = false
 }
 
 module "sbap01_alarms" {
