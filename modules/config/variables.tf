@@ -3,6 +3,17 @@ variable "alert_email" {
   type        = string
 }
 
+variable "lambda_artifact_s3_bucket" {
+  description = "S3 bucket for storing Lambda deployment package."
+  type        = string
+}
+
+variable "lambda_artifact_s3_prefix" {
+  description = "S3 key prefix for the Lambda deployment package (content hash appended automatically)."
+  type        = string
+  default     = "lambda-artifacts"
+}
+
 variable "create_recorder" {
   description = "Whether to create the AWS Config recorder and delivery channel. Set to false if already configured in your account."
   type        = bool

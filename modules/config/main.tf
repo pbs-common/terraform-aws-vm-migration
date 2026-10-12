@@ -61,7 +61,7 @@ resource "aws_iam_role" "config_recorder" {
 resource "aws_iam_role_policy_attachment" "config_recorder" {
   count      = var.create_recorder ? 1 : 0
   role       = aws_iam_role.config_recorder[0].name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/ConfigRole"
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWS_ConfigRole"
 }
 
 resource "aws_iam_role_policy" "config_recorder_s3" {
@@ -121,10 +121,25 @@ resource "aws_config_configuration_recorder_status" "main" {
 # Lambda that evaluates every instance
 # ---------------------------------------------------------------------------
 
-data "archive_file" "checker" {
-  type        = "zip"
-  source_file = "${path.module}/ec2_alarm_check.py"
-  output_path = "${path.module}/ec2_alarm_check.zip"
+locals {
+  checker_source_hash     = filebase64sha256("${path.module}/ec2_alarm_check.py")
+  checker_source_hash_hex = filesha256("${path.module}/ec2_alarm_check.py")
+  checker_s3_key          = "${var.lambda_artifact_s3_prefix}/ec2_alarm_check-${local.checker_source_hash_hex}.zip"
+}
+
+resource "null_resource" "checker_upload" {
+  triggers = {
+    s3_bucket = var.lambda_artifact_s3_bucket
+    s3_key    = local.checker_s3_key
+  }
+
+  provisioner "local-exec" {
+    environment = {
+      S3_BUCKET = var.lambda_artifact_s3_bucket
+      S3_KEY    = local.checker_s3_key
+    }
+    command = "cd ${path.module} && zip -o ec2_alarm_check.zip ec2_alarm_check.py && aws s3 cp ec2_alarm_check.zip \"s3://$S3_BUCKET/$S3_KEY\""
+  }
 }
 
 resource "aws_iam_role" "checker" {
@@ -169,8 +184,9 @@ resource "aws_lambda_function" "checker" {
   role             = aws_iam_role.checker.arn
   runtime          = "python3.12"
   handler          = "ec2_alarm_check.handler"
-  filename         = data.archive_file.checker.output_path
-  source_code_hash = data.archive_file.checker.output_base64sha256
+  s3_bucket        = var.lambda_artifact_s3_bucket
+  s3_key           = local.checker_s3_key
+  source_code_hash = local.checker_source_hash
   timeout          = 300
 
   environment {
@@ -179,6 +195,12 @@ resource "aws_lambda_function" "checker" {
       REQUIRE_ALARM_ACTIONS = tostring(var.require_alarm_actions)
     }
   }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.checker_logs,
+    aws_iam_role_policy.checker,
+    null_resource.checker_upload,
+  ]
 }
 
 resource "aws_lambda_permission" "config" {
