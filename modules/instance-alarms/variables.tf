@@ -62,7 +62,7 @@ variable "critical_topic_arn" {
 }
 
 variable "services" {
-  description = "Named services to alarm on if the process stops running, via CWAgent's procstat plugin. Linux: pattern (matches the command line). Windows: exe (exact name) - pattern doesn't work there. Exactly one of pattern/exe."
+  description = "Named services to alarm on if the process stops running, via CWAgent's procstat plugin. Linux: pattern (matches the command line). Windows: exe (exact name). Pattern doesn't work there. Exactly one of pattern/exe."
   type = list(object({
     name    = string
     pattern = optional(string)
@@ -76,14 +76,14 @@ variable "services" {
   }
 
   validation {
-    # Services are keyed by name internally - a duplicate silently drops one alarm.
+    # Services are keyed by name internally. A duplicate silently drops one alarm.
     condition     = length(var.services) == length(distinct([for s in var.services : s.name]))
     error_message = "Each entry in services must have a unique name."
   }
 }
 
 variable "dso_topic_arn" {
-  description = "Extra SNS topic every alarm also notifies, for DSO's org-wide alerting. No default - set via TF_VAR_EXTRAS, not committed. Null disables it."
+  description = "Extra SNS topic every alarm also notifies, for DSO's org-wide alerting. No default. Set via TF_VAR_EXTRAS, not committed. Null disables it."
   type        = string
   default     = null
 }

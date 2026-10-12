@@ -179,7 +179,7 @@ module "dc1_alarms" {
   instance_type = module.dc1.instance_type
   os_family     = "windows"
   disks         = [{ drive_letter = "C:" }]
-  # NTDS, Netlogon, and Kdc share one process (lsass.exe) - one alarm, not three.
+  # NTDS, Netlogon, and Kdc share one process (lsass.exe). One alarm, not three.
   services = [
     { name = "ad-core-services", exe = "lsass.exe" },
     { name = "dns", exe = "dns.exe" },

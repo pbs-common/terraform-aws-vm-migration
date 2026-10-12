@@ -69,7 +69,7 @@ variable "cloudwatch_alarms_enabled" {
 }
 
 variable "dso_topic_arn" {
-  description = "Extra SNS topic for DSO org-wide alerting. Set via TF_VAR_EXTRAS, not committed - has a real account number."
+  description = "Extra SNS topic for DSO org-wide alerting. Set via TF_VAR_EXTRAS"
   type        = string
   default     = null
 }

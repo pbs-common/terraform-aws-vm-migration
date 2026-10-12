@@ -11,8 +11,8 @@ locals {
 
   dso_actions = compact([var.dso_topic_arn])
 
-  # Windows needs exe, not pattern (pattern silently matches nothing there) - and a
-  # different metric name, a space instead of an underscore. Confirmed live.
+  # Windows needs exe, not pattern (pattern matches nothing there). Metric name
+  # differs too, a space instead of an underscore. Confirmed live.
   procstat_match_key   = var.os_family == "windows" ? "exe" : "pattern"
   procstat_metric_name = var.os_family == "windows" ? "procstat_lookup pid_count" : "procstat_lookup_pid_count"
   services_by_name     = { for s in var.services : s.name => s }
@@ -123,7 +123,7 @@ resource "aws_cloudwatch_metric_alarm" "memory_high" {
   tags = merge(var.tags, { Name = "${var.environment}-${var.instance_name}-memory-high" })
 }
 
-# Additive config layer - doesn't touch the instance's existing disk/mem config.
+# Additive config layer. Doesn't touch the instance's existing disk/mem config.
 resource "aws_ssm_parameter" "procstat_config" {
   count = length(var.services) > 0 ? 1 : 0
 
@@ -165,15 +165,15 @@ resource "aws_ssm_association" "procstat_config" {
 
   tags = var.tags
 
-  # The parameter name never changes, only its value - without this, a services edit
+  # The parameter name never changes, only its value. Without this, a services edit
   # updates the parameter but never re-runs append-config on the instance.
   lifecycle {
     replace_triggered_by = [aws_ssm_parameter.procstat_config[0].value]
   }
 }
 
-# One alarm per named service. pid_count just checks for zero, not an exact count -
-# a multi-process service reports a higher healthy count. 300s, same as reachability.
+# One alarm per named service. pid_count just checks for zero, not an exact count.
+# A multi-process service reports a higher healthy count. 300s, same as reachability.
 resource "aws_cloudwatch_metric_alarm" "service_down" {
   for_each = local.services_by_name
 
