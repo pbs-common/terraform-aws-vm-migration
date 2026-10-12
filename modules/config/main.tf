@@ -201,7 +201,7 @@ resource "aws_iam_role_policy" "checker" {
 resource "aws_lambda_function" "checker" {
   function_name    = var.rule_name
   role             = aws_iam_role.checker.arn
-  runtime          = "python3.12"
+  runtime          = "python3.14"
   handler          = "ec2_alarm_check.handler"
   s3_bucket        = local.lambda_artifact_bucket
   s3_key           = local.checker_s3_key
