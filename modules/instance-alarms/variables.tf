@@ -71,8 +71,10 @@ variable "services" {
   default = []
 
   validation {
-    condition     = alltrue([for s in var.services : (s.pattern != null) != (s.exe != null)])
-    error_message = "Each service must set exactly one of pattern or exe, not both or neither."
+    # compact() drops both null and "". Without it, an empty string would pass
+    # this check, then crash coalesce() later with a much less useful error.
+    condition     = alltrue([for s in var.services : length(compact([s.pattern, s.exe])) == 1])
+    error_message = "Each service must set exactly one of pattern or exe (non-empty), not both or neither."
   }
 
   validation {
