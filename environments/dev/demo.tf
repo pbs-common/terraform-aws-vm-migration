@@ -8,7 +8,7 @@ module "ec2" {
 
   ingress_rules = [
     {
-      description = "LDAP from on-prem"
+      description = "RDP from on-prem"
       from_port   = 3389
       to_port     = 3389
       protocol    = "tcp"
@@ -17,6 +17,9 @@ module "ec2" {
   ]
 
   tags = {
-    Environment = "dev"
+    "pbs:billing:environment" = "dev"
+    "pbs:billing:product"     = "dev"
+    "pbs:billing:owner"       = "infra"
+    "repo"                    = "https://github.com/pbs-common/terraform-aws-vm-migration.git"
   }
 }
