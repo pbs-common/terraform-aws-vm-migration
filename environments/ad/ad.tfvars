@@ -14,8 +14,8 @@ cloudwatch_alerts_notification_channels = {
   }
 }
 
-# Flip to true once alarms are verified settled after the first apply.
-cloudwatch_alarms_enabled = false
+# Confirmed settled, nothing stuck in ALARM, before flipping this on.
+cloudwatch_alarms_enabled = true
 
 # Golden AMI: AD-DS/DNS installed, not promoted, sysprepped. Built manually.
 golden_ami_id = "ami-038905f9eb15c1313"
