@@ -1,5 +1,5 @@
-module "dc1" {
-  source = "./modules/ec2-workload"
+module "ec2" {
+  source = "../../modules/ec2-workload"
 
   name                       = "demo-instance-1"
   os_family                  = "windows"
