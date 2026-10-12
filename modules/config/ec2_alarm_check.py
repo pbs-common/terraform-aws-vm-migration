@@ -82,7 +82,7 @@ def _previously_evaluated(rule_name):
 
 def handler(event, context):
     invoking_event = json.loads(event["invokingEvent"])
-    timestamp = invoking_event["notificationTime"]
+    timestamp = invoking_event["notificationCreationTime"]
     result_token = event["resultToken"]
     rule_name = event["configRuleName"]
 
