@@ -1,14 +1,15 @@
 # Instance Alarms Module
 
-This module creates the standard disk, reachability, CPU, and memory alarms for one EC2 instance, wired to notification channels created by the `cloudwatch-alerts` module. One module call per instance, placed next to that instance's own `aws_instance`/module block.
+This module creates the standard disk, reachability, CPU, memory, and service-down alarms for one EC2 instance, wired to notification channels created by the `cloudwatch-alerts` module. One module call per instance, placed next to that instance's own `aws_instance`/module block.
 
 ## Alarms created
 
 - **Disk** - one 8%/4%/0%-free alarm set per entry in `disks` (routine/critical/critical).
 - **Reachability** - one EC2 status check alarm, always routed to the critical channel.
 - **CPU and memory** - one alarm each, unconditional (no input needed), 90% sustained for 15 minutes, routed to the critical channel.
+- **Service-down** - one alarm per entry in `services`, via CWAgent's procstat plugin. Routed to the critical channel, same as reachability.
 
-`critical_topic_arn` defaults to `routine_topic_arn` for environments with only one channel.
+`critical_topic_arn` defaults to `routine_topic_arn` for environments with only one channel. Every alarm also notifies `dso_topic_arn` if set.
 
 ## Usage
 
@@ -23,9 +24,13 @@ module "dc1_alarms" {
   instance_type = module.dc1.instance_type
   os_family     = "windows"
   disks         = [{ drive_letter = "C:" }]
+  services = [
+    { name = "ad-core-services", exe = "lsass.exe" },
+  ]
 
   routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
   critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
+  dso_topic_arn      = var.dso_topic_arn
 }
 ```
 
@@ -43,6 +48,8 @@ module "dc1_alarms" {
 | routine_topic_arn | SNS topic ARN for routine-severity notifications (disk at 8% free). | `string` | n/a | yes |
 | actions_enabled | Whether these alarms notify on state change. Set false for an initial rollout so alarms settle into real state without firing. | `bool` | `true` | no |
 | critical_topic_arn | SNS topic ARN for critical-severity notifications (disk at 4%/0% free, unreachable). Defaults to `routine_topic_arn` for environments with no separate critical channel. | `string` | `null` | no |
+| dso_topic_arn | Extra SNS topic every alarm also notifies, for DSO's org-wide alerting. No default. Set via TF_VAR_EXTRAS, not committed. Null disables it. | `string` | `null` | no |
+| services | Named services to alarm on if the process stops running, via CWAgent's procstat plugin. Linux: pattern (matches the command line). Windows: exe (exact name). Pattern doesn't work there. Exactly one of pattern/exe. | `list(object({...}))` | `[]` | no |
 | tags | Tags applied to each alarm, merged with an automatic Name tag. | `map(string)` | `{}` | no |
 
 ## Outputs

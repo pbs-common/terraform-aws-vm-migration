@@ -131,10 +131,14 @@ module "esb_rtm01_qa_alarms" {
     { path = "/", device = "mapper/rhel-root", fstype = "xfs" },
     { label = "home", path = "/home", device = "mapper/rhel-home", fstype = "xfs" },
   ]
+  services = [
+    { name = "activemq", pattern = "activemq" },
+  ]
 
   routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
   critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
   actions_enabled    = var.cloudwatch_alarms_enabled
+  dso_topic_arn      = var.dso_topic_arn
 
   tags = var.tags
 }

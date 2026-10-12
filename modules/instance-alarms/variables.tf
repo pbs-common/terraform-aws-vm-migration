@@ -61,6 +61,35 @@ variable "critical_topic_arn" {
   default     = null
 }
 
+variable "services" {
+  description = "Named services to alarm on if the process stops running, via CWAgent's procstat plugin. Linux: pattern (matches the command line). Windows: exe (exact name). Pattern doesn't work there. Exactly one of pattern/exe."
+  type = list(object({
+    name    = string
+    pattern = optional(string)
+    exe     = optional(string)
+  }))
+  default = []
+
+  validation {
+    # compact() drops both null and "". Without it, an empty string would pass
+    # this check, then crash coalesce() later with a much less useful error.
+    condition     = alltrue([for s in var.services : length(compact([s.pattern, s.exe])) == 1])
+    error_message = "Each service must set exactly one of pattern or exe (non-empty), not both or neither."
+  }
+
+  validation {
+    # Services are keyed by name internally. A duplicate silently drops one alarm.
+    condition     = length(var.services) == length(distinct([for s in var.services : s.name]))
+    error_message = "Each entry in services must have a unique name."
+  }
+}
+
+variable "dso_topic_arn" {
+  description = "Extra SNS topic every alarm also notifies, for DSO's org-wide alerting. No default. Set via TF_VAR_EXTRAS, not committed. Null disables it."
+  type        = string
+  default     = null
+}
+
 variable "actions_enabled" {
   description = "Whether these alarms notify on state change. Set false for an initial rollout so alarms settle into real state without firing."
   type        = bool
