@@ -172,15 +172,29 @@ resource "aws_ssm_association" "procstat_config" {
   }
 }
 
-# One alarm per named service. pid_count just checks for zero, not an exact count.
-# A multi-process service reports a higher healthy count. 300s, same as reachability.
+# Deleting the parameter/association alone doesn't undo what's on the instance.
+resource "null_resource" "procstat_cleanup" {
+  count = length(var.services) > 0 ? 1 : 0
+
+  triggers = {
+    instance_id = var.instance_id
+    param_name  = aws_ssm_parameter.procstat_config[0].name
+  }
+
+  provisioner "local-exec" {
+    when    = destroy
+    command = "aws ssm send-command --instance-ids ${self.triggers.instance_id} --document-name AmazonCloudWatch-ManageAgent --parameters action='configure (remove)',mode=ec2,optionalConfigurationSource=ssm,optionalConfigurationLocation=${self.triggers.param_name},optionalRestart=yes"
+  }
+}
+
+# One alarm per named service. Maximum, not Minimum, so a brief blip doesn't trip it.
 resource "aws_cloudwatch_metric_alarm" "service_down" {
   for_each = local.services_by_name
 
   alarm_name          = "${var.environment}-${var.instance_name}-${each.key}-down"
   namespace           = "CWAgent"
   metric_name         = local.procstat_metric_name
-  statistic           = "Minimum"
+  statistic           = "Maximum"
   period              = 300
   evaluation_periods  = 1
   threshold           = 1
