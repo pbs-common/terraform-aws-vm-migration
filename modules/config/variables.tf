@@ -4,14 +4,15 @@ variable "alert_email" {
 }
 
 variable "lambda_artifact_s3_bucket" {
-  description = "S3 bucket for storing Lambda deployment package."
+  description = "S3 bucket for storing Lambda deployment package. If not provided, a bucket will be created."
   type        = string
+  default     = null
 }
 
 variable "lambda_artifact_s3_prefix" {
   description = "S3 key prefix for the Lambda deployment package (content hash appended automatically)."
   type        = string
-  default     = "lambda-artifacts"
+  default     = "lambda-artifacts/config"
 }
 
 variable "create_recorder" {

@@ -3,6 +3,30 @@
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
+locals {
+  # Use provided bucket or create one
+  lambda_artifact_bucket = var.lambda_artifact_s3_bucket != null ? var.lambda_artifact_s3_bucket : aws_s3_bucket.lambda_artifacts[0].id
+  
+  checker_source_hash     = filebase64sha256("${path.module}/ec2_alarm_check.py")
+  checker_source_hash_hex = filesha256("${path.module}/ec2_alarm_check.py")
+  checker_s3_key          = "${var.lambda_artifact_s3_prefix}/ec2_alarm_check-${local.checker_source_hash_hex}.zip"
+}
+
+# Create S3 bucket for Lambda artifacts if not provided
+resource "aws_s3_bucket" "lambda_artifacts" {
+  count  = var.lambda_artifact_s3_bucket == null ? 1 : 0
+  bucket = "${var.rule_name}-lambda-artifacts-${data.aws_caller_identity.current.account_id}"
+}
+
+resource "aws_s3_bucket_versioning" "lambda_artifacts" {
+  count  = var.lambda_artifact_s3_bucket == null ? 1 : 0
+  bucket = aws_s3_bucket.lambda_artifacts[0].id
+
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 # ---------------------------------------------------------------------------
 # AWS Config Recorder & Delivery Channel (created only if create_recorder = true)
 # ---------------------------------------------------------------------------
@@ -121,21 +145,15 @@ resource "aws_config_configuration_recorder_status" "main" {
 # Lambda that evaluates every instance
 # ---------------------------------------------------------------------------
 
-locals {
-  checker_source_hash     = filebase64sha256("${path.module}/ec2_alarm_check.py")
-  checker_source_hash_hex = filesha256("${path.module}/ec2_alarm_check.py")
-  checker_s3_key          = "${var.lambda_artifact_s3_prefix}/ec2_alarm_check-${local.checker_source_hash_hex}.zip"
-}
-
 resource "null_resource" "checker_upload" {
   triggers = {
-    s3_bucket = var.lambda_artifact_s3_bucket
+    s3_bucket = local.lambda_artifact_bucket
     s3_key    = local.checker_s3_key
   }
 
   provisioner "local-exec" {
     environment = {
-      S3_BUCKET = var.lambda_artifact_s3_bucket
+      S3_BUCKET = local.lambda_artifact_bucket
       S3_KEY    = local.checker_s3_key
     }
     command = "cd ${path.module} && zip -o ec2_alarm_check.zip ec2_alarm_check.py && aws s3 cp ec2_alarm_check.zip \"s3://$S3_BUCKET/$S3_KEY\""
@@ -184,7 +202,7 @@ resource "aws_lambda_function" "checker" {
   role             = aws_iam_role.checker.arn
   runtime          = "python3.12"
   handler          = "ec2_alarm_check.handler"
-  s3_bucket        = var.lambda_artifact_s3_bucket
+  s3_bucket        = local.lambda_artifact_bucket
   s3_key           = local.checker_s3_key
   source_code_hash = local.checker_source_hash
   timeout          = 300
