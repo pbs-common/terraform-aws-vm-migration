@@ -9,6 +9,14 @@ locals {
 
   disks_by_label = { for d in var.disks : d.label => d }
 
+  dso_actions = compact([var.dso_topic_arn])
+
+  # Windows needs exe, not pattern (pattern silently matches nothing there) - and a
+  # different metric name, a space instead of an underscore. Confirmed live.
+  procstat_match_key   = var.os_family == "windows" ? "exe" : "pattern"
+  procstat_metric_name = var.os_family == "windows" ? "procstat_lookup pid_count" : "procstat_lookup_pid_count"
+  services_by_name     = { for s in var.services : s.name => s }
+
   # Same free-percent policy for every disk: 8% free is routine, 4%/0% free is critical.
   disk_thresholds = {
     "8" = { free_percent = 8, topic_arn = var.routine_topic_arn }
@@ -48,8 +56,8 @@ resource "aws_cloudwatch_metric_alarm" "disk_free" {
   )
 
   actions_enabled = var.actions_enabled
-  alarm_actions   = [each.value.threshold.topic_arn]
-  ok_actions      = [each.value.threshold.topic_arn]
+  alarm_actions   = concat([each.value.threshold.topic_arn], local.dso_actions)
+  ok_actions      = concat([each.value.threshold.topic_arn], local.dso_actions)
 
   tags = merge(var.tags, { Name = join("-", compact([var.environment, var.instance_name, each.value.disk.label, "disk-free-${each.value.threshold.free_percent}"])) })
 }
@@ -67,8 +75,8 @@ resource "aws_cloudwatch_metric_alarm" "unreachable" {
   dimensions          = { InstanceId = var.instance_id }
 
   actions_enabled = var.actions_enabled
-  alarm_actions   = [local.critical_topic_arn]
-  ok_actions      = [local.critical_topic_arn]
+  alarm_actions   = concat([local.critical_topic_arn], local.dso_actions)
+  ok_actions      = concat([local.critical_topic_arn], local.dso_actions)
 
   tags = merge(var.tags, { Name = "${var.environment}-${var.instance_name}-unreachable" })
 }
@@ -86,8 +94,8 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high" {
   dimensions          = { InstanceId = var.instance_id }
 
   actions_enabled = var.actions_enabled
-  alarm_actions   = [local.critical_topic_arn]
-  ok_actions      = [local.critical_topic_arn]
+  alarm_actions   = concat([local.critical_topic_arn], local.dso_actions)
+  ok_actions      = concat([local.critical_topic_arn], local.dso_actions)
 
   tags = merge(var.tags, { Name = "${var.environment}-${var.instance_name}-cpu-high" })
 }
@@ -109,8 +117,78 @@ resource "aws_cloudwatch_metric_alarm" "memory_high" {
   )
 
   actions_enabled = var.actions_enabled
-  alarm_actions   = [local.critical_topic_arn]
-  ok_actions      = [local.critical_topic_arn]
+  alarm_actions   = concat([local.critical_topic_arn], local.dso_actions)
+  ok_actions      = concat([local.critical_topic_arn], local.dso_actions)
 
   tags = merge(var.tags, { Name = "${var.environment}-${var.instance_name}-memory-high" })
+}
+
+# Additive config layer - doesn't touch the instance's existing disk/mem config.
+resource "aws_ssm_parameter" "procstat_config" {
+  count = length(var.services) > 0 ? 1 : 0
+
+  name = "/cloudwatch-agent/${var.environment}-${var.instance_name}/procstat"
+  type = "String"
+  value = jsonencode({
+    metrics = {
+      metrics_collected = {
+        procstat = [
+          for s in var.services : merge(
+            { (local.procstat_match_key) = coalesce(s.pattern, s.exe) },
+            { measurement = ["pid_count"] }
+          )
+        ]
+      }
+    }
+  })
+
+  tags = merge(var.tags, { Name = "${var.environment}-${var.instance_name}-procstat-config" })
+}
+
+resource "aws_ssm_association" "procstat_config" {
+  count = length(var.services) > 0 ? 1 : 0
+
+  name = "AmazonCloudWatch-ManageAgent"
+
+  targets {
+    key    = "InstanceIds"
+    values = [var.instance_id]
+  }
+
+  parameters = {
+    action                        = "configure (append)"
+    mode                          = "ec2"
+    optionalConfigurationSource   = "ssm"
+    optionalConfigurationLocation = aws_ssm_parameter.procstat_config[0].name
+    optionalRestart               = "yes"
+  }
+
+  tags = var.tags
+}
+
+# One alarm per named service. pid_count just checks for zero, not an exact count -
+# a multi-process service reports a higher healthy count. 300s, same as reachability.
+resource "aws_cloudwatch_metric_alarm" "service_down" {
+  for_each = local.services_by_name
+
+  alarm_name          = "${var.environment}-${var.instance_name}-${each.key}-down"
+  namespace           = "CWAgent"
+  metric_name         = local.procstat_metric_name
+  statistic           = "Minimum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 1
+  comparison_operator = "LessThanThreshold"
+
+  dimensions = merge(
+    local.base_dimensions,
+    { (local.procstat_match_key) = coalesce(each.value.pattern, each.value.exe) },
+    { pid_finder = "native" }
+  )
+
+  actions_enabled = var.actions_enabled
+  alarm_actions   = concat([local.critical_topic_arn], local.dso_actions)
+  ok_actions      = concat([local.critical_topic_arn], local.dso_actions)
+
+  tags = merge(var.tags, { Name = "${var.environment}-${var.instance_name}-${each.key}-down" })
 }

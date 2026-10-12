@@ -179,12 +179,20 @@ module "dc1_alarms" {
   instance_type = module.dc1.instance_type
   os_family     = "windows"
   disks         = [{ drive_letter = "C:" }]
+  # NTDS, Netlogon, and Kdc share one process (lsass.exe) - one alarm, not three.
+  services = [
+    { name = "ad-core-services", exe = "lsass.exe" },
+    { name = "dns", exe = "dns.exe" },
+  ]
 
   routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
   critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
   actions_enabled    = var.cloudwatch_alarms_enabled
+  dso_topic_arn      = var.dso_topic_arn
 
   tags = var.tags
+
+  depends_on = [module.dc1] # needs CW Agent installed first
 }
 
 module "ssm_session_access" {
@@ -230,12 +238,19 @@ module "dc2_alarms" {
   instance_type = module.dc2.instance_type
   os_family     = "windows"
   disks         = [{ drive_letter = "C:" }]
+  services = [
+    { name = "ad-core-services", exe = "lsass.exe" },
+    { name = "dns", exe = "dns.exe" },
+  ]
 
   routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
   critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
   actions_enabled    = var.cloudwatch_alarms_enabled
+  dso_topic_arn      = var.dso_topic_arn
 
   tags = var.tags
+
+  depends_on = [module.dc2] # needs CW Agent installed first
 }
 
 module "backup" {

@@ -61,6 +61,33 @@ variable "critical_topic_arn" {
   default     = null
 }
 
+variable "services" {
+  description = "Named services to alarm on if the process stops running, via CWAgent's procstat plugin. Linux: pattern (matches the command line). Windows: exe (exact name) - pattern doesn't work there. Exactly one of pattern/exe."
+  type = list(object({
+    name    = string
+    pattern = optional(string)
+    exe     = optional(string)
+  }))
+  default = []
+
+  validation {
+    condition     = alltrue([for s in var.services : (s.pattern != null) != (s.exe != null)])
+    error_message = "Each service must set exactly one of pattern or exe, not both or neither."
+  }
+
+  validation {
+    # Services are keyed by name internally - a duplicate silently drops one alarm.
+    condition     = length(var.services) == length(distinct([for s in var.services : s.name]))
+    error_message = "Each entry in services must have a unique name."
+  }
+}
+
+variable "dso_topic_arn" {
+  description = "Extra SNS topic every alarm also notifies, for DSO's org-wide alerting. No default - set via TF_VAR_EXTRAS, not committed. Null disables it."
+  type        = string
+  default     = null
+}
+
 variable "actions_enabled" {
   description = "Whether these alarms notify on state change. Set false for an initial rollout so alarms settle into real state without firing."
   type        = bool

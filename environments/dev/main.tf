@@ -101,6 +101,7 @@ module "emts01_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -150,6 +151,7 @@ module "emts03_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -199,6 +201,7 @@ module "emts02_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -320,9 +323,15 @@ module "sbap01_alarms" {
     # sbap01 also has a real /home volume, separate from /.
     { label = "home", path = "/home", device = "mapper/rhel-home", fstype = "xfs" },
   ]
+  services = [
+    { name = "readyapi", pattern = "readyapi-testengine" },
+    { name = "sonarqube", pattern = "/opt/sonarqube" },
+    { name = "postgresql", pattern = "postgres" },
+  ]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }

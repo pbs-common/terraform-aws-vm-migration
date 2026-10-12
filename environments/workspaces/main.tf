@@ -102,6 +102,7 @@ module "ngws_zc_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -148,9 +149,13 @@ module "ghsd01_alarms" {
   instance_type = aws_instance.s_ghsd01_dat1_w.instance_type
   os_family     = "windows"
   disks         = [{ drive_letter = "C:" }]
+  services = [
+    { name = "gh-runner", exe = "RunnerService.exe" },
+  ]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -204,6 +209,7 @@ module "sits01_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -252,6 +258,7 @@ module "ngws_sm_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -301,6 +308,7 @@ module "ngws_bb_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -350,6 +358,7 @@ module "ngws_kt_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -399,6 +408,7 @@ module "devops_app1_dev_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -452,6 +462,7 @@ module "esdev_brian_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -501,6 +512,7 @@ module "esdev_chex_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -547,9 +559,13 @@ module "sid1_alarms" {
   instance_type = aws_instance.s_si_d1_t1_w.instance_type
   os_family     = "windows"
   disks         = [{ drive_letter = "C:" }]
+  services = [
+    { name = "mssql", exe = "sqlservr.exe" },
+  ]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -590,9 +606,19 @@ module "ghsd04_alarms" {
   instance_type = aws_instance.s_ghsd04_dat1_x.instance_type
   os_family     = "linux"
   disks         = [{ path = "/", device = "mapper/ubuntu--vg-ubuntu--lv", fstype = "ext4" }]
+  # 6 independent runner instances, no shared PIDs between them.
+  services = [
+    { name = "gh-runner-sdo-1", pattern = "/opt/apps/runners/sdo-1/" },
+    { name = "gh-runner-sdo-2", pattern = "/opt/apps/runners/sdo-2/" },
+    { name = "gh-runner-sdo-3", pattern = "/opt/apps/runners/sdo-3/" },
+    { name = "gh-runner-sdo-4", pattern = "/opt/apps/runners/sdo-4/" },
+    { name = "gh-runner-sdo-5", pattern = "/opt/apps/runners/sdo-5/" },
+    { name = "gh-runner-sdo-6", pattern = "/opt/apps/runners/sdo-6/" },
+  ]
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -636,6 +662,7 @@ module "esdev10_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -685,6 +712,7 @@ module "ngws_mr_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -734,6 +762,7 @@ module "ngws_ld_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -781,6 +810,7 @@ module "esdev12_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }
@@ -828,6 +858,7 @@ module "esdev08_alarms" {
 
   routine_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
   actions_enabled   = var.cloudwatch_alarms_enabled
+  dso_topic_arn     = var.dso_topic_arn
 
   tags = var.tags
 }

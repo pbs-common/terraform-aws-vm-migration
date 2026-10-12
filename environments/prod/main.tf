@@ -100,6 +100,7 @@ module "amsi01_alarms" {
   routine_topic_arn  = module.cloudwatch_alerts.sns_topic_arns["routine"]
   critical_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
   actions_enabled    = var.cloudwatch_alarms_enabled
+  dso_topic_arn      = var.dso_topic_arn
 
   tags = var.tags
 }
