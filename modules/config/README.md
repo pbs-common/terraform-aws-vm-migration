@@ -276,9 +276,9 @@ Now Config compliance alerts and CloudWatch instance alarms all route to the sam
 
 ## Cost Considerations
 
-- **AWS Config**: Charged per rule evaluation (e.g., $0.10/rule/month for hourly evaluation)
+- **AWS Config**: Charged per rule evaluation. For this periodic custom rule, estimate `EC2 instance count × evaluations per month × the current AWS Config per-evaluation rate` (about 720 evaluations per instance each month at the hourly default).
 - **Lambda**: Charged per invocation and duration
 - **S3**: Small storage cost for Config snapshots and Lambda artifacts
 - **SNS**: Charged per notification sent
 
-Total cost typically $5-15/month per environment.
+Total cost scales with the number of EC2 instances, evaluation frequency, configuration-item recording, and notification volume; use current AWS pricing for an account-specific estimate.
