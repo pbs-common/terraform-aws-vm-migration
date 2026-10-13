@@ -9,10 +9,8 @@ All Terraform runs in GitHub Actions. There are no local `init`, `plan`, or `app
 against the shared state, except for `environments/org-delegation` (see
 [Environments not run by CI](#environments-not-run-by-ci)).
 
-> **Upcoming migration.** The `modules/` directory and the reusable `terraform-*.yaml`
-> workflows are moving to external repositories shortly. See
-> [Planned migration](#planned-migration-modules-and-reusable-workflows) before adding to
-> either.
+> **Upcoming migration.** The `modules/` directory is moving to external module repositories
+> shortly. See [Planned migration](#planned-migration-modules) before adding to it.
 
 ---
 
@@ -25,8 +23,6 @@ against the shared state, except for `environments/org-delegation` (see
 │   │   ├── ad.yaml, dev.yaml, staging.yaml,     Entrypoint workflows, one per environment
 │   │   │   prod.yaml, workspaces.yaml
 │   │   ├── ci-coverage.yaml                     Repo-wide coverage check + tflint of every directory
-│   │   ├── terraform-{validate,plan,apply,      Reusable workflows (moving out, see below)
-│   │   │   destroy}.yaml
 │   │   └── README.md                            Pipeline user guide
 │   ├── scripts/
 │   │   ├── check_terraform_ci_coverage.py       Fails CI if a Terraform directory is not covered
@@ -131,7 +127,8 @@ It is still linted by `ci-coverage.yaml`. See
 
 Every environment workflow runs the same three stages, calling reusable workflows from
 [`pbs-common/terraform-aws-shared-ghpipeline`](https://github.com/pbs-common/terraform-aws-shared-ghpipeline),
-pinned to a commit SHA.
+pinned to a commit SHA. To change a pipeline stage, make the change in that repository, then
+bump the pinned SHA in each entrypoint workflow.
 
 ```mermaid
 flowchart TD
@@ -178,27 +175,11 @@ Full detail, troubleshooting, and the steps for adding a new environment are in
 
 ---
 
-## Planned migration: modules and reusable workflows
+## Planned migration: modules
 
-Two parts of this repository are moving to external repositories shortly. This repository will
-then contain only environment root modules, entrypoint workflows, CI coverage tooling, and the
-MGN agent scripts.
-
-### Reusable workflows
-
-| Local file | Destination |
-|---|---|
-| `.github/workflows/terraform-validate.yaml` | `pbs-common/terraform-aws-shared-ghpipeline` |
-| `.github/workflows/terraform-plan.yaml` | `pbs-common/terraform-aws-shared-ghpipeline` |
-| `.github/workflows/terraform-apply.yaml` | `pbs-common/terraform-aws-shared-ghpipeline` |
-| `.github/workflows/terraform-destroy.yaml` | `pbs-common/terraform-aws-shared-ghpipeline` |
-
-The entrypoint workflows (`ad.yaml`, `dev.yaml`, `staging.yaml`, `prod.yaml`, `workspaces.yaml`)
-**already call the shared repository**, pinned to a commit SHA. The local `terraform-*.yaml`
-files are no longer invoked by any entrypoint and will be deleted. Make workflow changes in the
-shared repository, then bump the pinned SHA in each entrypoint.
-
-### Modules
+The `modules/` directory is moving to external repositories shortly. This repository will then
+contain only environment root modules, entrypoint workflows, CI coverage tooling, and the MGN
+agent scripts.
 
 Everything under `modules/` will move to external module repositories. Expected changes here
 when that happens:

@@ -151,83 +151,6 @@ class CheckerSelfTest(unittest.TestCase):
              expect=2)
         self.assert_rejected(".github/workflows/ad.yaml")
 
-    # ---- check 1: tflint running without a usable config ------------------------
-    def test_tflint_without_config_file_is_rejected(self) -> None:
-        # Remove ONLY the config line. Deleting the whole `env:` block would orphan the
-        # sibling GITHUB_TOKEN and yield invalid YAML, which the checker rejects for a
-        # different reason -- a mutation that lands on the wrong defect proves nothing.
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n", "")
-        self.assert_rejected("runs tflint without TFLINT_CONFIG_FILE")
-
-    def test_an_empty_tflint_config_file_is_rejected(self) -> None:
-        """An empty value leaves tflint looking in its working directory, exactly as if
-        the variable were unset -- so presence of the NAME is not the check."""
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
-             '          TFLINT_CONFIG_FILE: ""\n')
-        self.assert_rejected("empty value")
-
-    def test_a_tflint_config_file_pointing_elsewhere_is_rejected(self) -> None:
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
-             "          TFLINT_CONFIG_FILE: /tmp/somewhere-else.json\n")
-        self.assert_rejected("not a recognised spelling")
-
-    def test_the_same_basename_in_a_DIFFERENT_directory_is_rejected(self) -> None:
-        """A suffix test passed /tmp/.tflint.hcl, which loads a different config with no
-        AWS plugin while the guard reported success. The basename is not the check."""
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
-             "          TFLINT_CONFIG_FILE: /tmp/.tflint.hcl\n")
-        self.assert_rejected("not a recognised spelling")
-
-    def test_a_step_level_empty_value_overrides_a_valid_job_level_one(self) -> None:
-        """Scope precedence, not mere presence. A step-level empty string wins over a
-        correct job-level value, so a checker that asks 'does the name appear in ANY
-        scope' reports a configured step that is in fact unconfigured."""
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
-             '          TFLINT_CONFIG_FILE: ""\n')
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "    defaults:\n",
-             "    env:\n      TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n\n    defaults:\n")
-        self.assert_rejected("empty value")
-
-    def test_an_unclassifiable_tflint_command_is_rejected_not_ignored(self) -> None:
-        """'Could not parse' is not a pass. `sudo tflint` is a real invocation this
-        script does not model; reading it as 'no tflint here' would silently drop the
-        config check for that step."""
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "          tflint --init\n          tflint --format compact\n",
-             "          sudo tflint --init\n          sudo tflint --format compact\n")
-        self.assert_rejected("cannot classify as an invocation")
-
-    def test_a_relative_tflint_config_path_is_rejected(self) -> None:
-        """Relative resolves against the step's working-directory (environments/ad), not
-        the repository root -- so it finds no config and loads no AWS plugin."""
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
-             "          TFLINT_CONFIG_FILE: .tflint.hcl\n")
-        self.assert_rejected("not a recognised spelling")
-
-    def test_an_unexpanded_shell_variable_config_path_is_rejected(self) -> None:
-        """A workflow `env:` value is not shell-expanded, so tflint receives the dollar
-        sign literally. This spelling was briefly ACCEPTED by this checker; it does not
-        work."""
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "          TFLINT_CONFIG_FILE: ${{ github.workspace }}/.tflint.hcl\n",
-             "          TFLINT_CONFIG_FILE: $GITHUB_WORKSPACE/.tflint.hcl\n")
-        self.assert_rejected("not a recognised spelling")
-
-    def test_a_conditional_tflint_step_is_rejected(self) -> None:
-        """`if: false` on the lint step would disable linting repository-wide while every
-        caller still counted as covered."""
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "      - name: Run TFLint\n        env:\n",
-             "      - name: Run TFLint\n        if: false\n        env:\n")
-        self.assert_rejected("runs tflint under a condition")
-
     def test_removing_the_direct_lint_job_is_rejected(self) -> None:
         """The model fix itself. Planning an environment does not lint its modules, so
         without this job a module regression ships with CI green."""
@@ -370,12 +293,9 @@ class CheckerSelfTest(unittest.TestCase):
         self.assert_rejected("does not exist")
 
     def test_a_repository_with_no_tflint_anywhere_is_rejected(self) -> None:
-        """All three tflint sources must go: the local plan pipeline, the direct-lint job,
-        and every caller's trust in the shared plan workflow. Removing only some leaves a
-        different (also caught) defect -- vacuity means absent EVERYWHERE."""
-        edit(self.repo / ".github/workflows/terraform-plan.yaml",
-             "          tflint --init\n          tflint --format compact\n",
-             "          echo skipped\n")
+        """Both tflint sources must go: the direct-lint job and every caller's trust in
+        the shared plan workflow. Removing only one leaves a different (also caught)
+        defect -- vacuity means absent EVERYWHERE."""
         edit(self.repo / ".github/workflows/ci-coverage.yaml",
              '            ( cd "$d" && tflint --format compact ) || FAILED=1\n',
              '            ( cd "$d" && echo skipped ) || FAILED=1\n')
@@ -433,16 +353,15 @@ class TflintInvocationGrammar(unittest.TestCase):
                 self.assertTrue(self.unclear(block), "must be flagged as unclassifiable")
 
     def test_every_tflint_step_in_the_repository_is_configured(self) -> None:
-        """Anchors the COUNT as well as the state, so a third tflint step -- or an
-        unconfigured one -- cannot arrive quietly. Two are expected: the plan pipeline's,
-        and the credential-free job that lints every directory."""
+        """Anchors the COUNT as well as the state, so a second tflint step -- or an
+        unconfigured one -- cannot arrive quietly. One is expected: the credential-free
+        job that lints every directory."""
         workflows, problems = checker.load_workflows(REPO)
         self.assertEqual(problems, [])
         steps = list(checker.tflint_run_steps(workflows))
-        self.assertEqual(len(steps), 2, f"expected two tflint steps, found {len(steps)}")
+        self.assertEqual(len(steps), 1, f"expected one tflint step, found {len(steps)}")
         self.assertEqual(
-            sorted(wf["rel"] for wf, *_ in steps),
-            [".github/workflows/ci-coverage.yaml", ".github/workflows/terraform-plan.yaml"])
+            [wf["rel"] for wf, *_ in steps], [".github/workflows/ci-coverage.yaml"])
         for wf, _, label, envs, unclear, conditions in steps:
             with self.subTest(step=f"{wf['rel']}:{label}"):
                 self.assertEqual(unclear, [])
