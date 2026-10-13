@@ -299,6 +299,7 @@ resource "aws_cloudwatch_event_rule" "noncompliant" {
 }
 
 resource "aws_cloudwatch_event_target" "sns" {
+  count = var.enable_notifications ? 1 : 0
   rule = aws_cloudwatch_event_rule.noncompliant.name
   arn  = local.notification_topic_arn
 

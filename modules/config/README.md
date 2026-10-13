@@ -127,16 +127,40 @@ module "config" {
 }
 ```
 
+### Mode 4: Evaluate Without Alerts (Testing)
+
+Deploy the module to evaluate EC2 compliance but don't send any alerts. Useful for testing before enabling notifications.
+
+```hcl
+module "config" {
+  source = "../../modules/config"
+
+  enable_notifications = false
+  create_recorder      = false
+  
+  tags = var.tags
+}
+```
+
+**This:**
+- Creates Config rule and Lambda evaluator
+- Evaluates compliance and stores results in Config
+- **Does NOT create SNS topic or EventBridge target**
+- **Does NOT send alerts** even if instances are non-compliant
+
+Once testing is complete, switch `enable_notifications = true` and provide a notification destination.
+
 ## Inputs
 
-### Required When `create_notification_topic = true`
+### Required When `create_notification_topic = true` AND `enable_notifications = true`
 - **`alert_email`** (string): Email to receive alerts. Must confirm SNS subscription after deploy.
 
-### Required When `create_notification_topic = false`
+### Required When `create_notification_topic = false` AND `enable_notifications = true`
 - **`notification_topic_arn`** (string): SNS topic ARN for alerts. No subscription management by this module.
 
 ### Optional
-- **`create_notification_topic`** (bool, default: `true`): Whether to create a dedicated SNS topic for alerts.
+- **`enable_notifications`** (bool, default: `true`): Whether to send alerts on non-compliance. Set to `false` for testing (Config will still evaluate compliance but won't create SNS topics or EventBridge targets).
+- **`create_notification_topic`** (bool, default: `false`): Whether to create a dedicated SNS topic for alerts (only used when `enable_notifications = true`).
 - **`create_recorder`** (bool, default: `true`): Whether to create AWS Config recorder. Set to `false` if one already exists.
 - **`rule_name`** (string, default: `"ec2-required-cloudwatch-alarms"`): Name for the Config rule and related resources.
 - **`evaluation_frequency`** (string, default: `"One_Hour"`): How often Config runs the check. Options: `One_Hour`, `Three_Hours`, `Six_Hours`, `Twelve_Hours`, `TwentyFour_Hours`.

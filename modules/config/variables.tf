@@ -8,15 +8,23 @@ variable "create_notification_topic" {
   description = "Whether to create a dedicated SNS topic for non-compliance alerts."
   type        = bool
   default     = false
+}
+
+variable "enable_notifications" {
+  description = "Whether to send alerts on non-compliance. Set to false to evaluate compliance without sending alerts (useful for testing)."
+  type        = bool
+  default     = true
 
   validation {
-    condition     = var.create_notification_topic ? var.alert_email != null : var.notification_topic_arn != null
-    error_message = "Provide alert_email when creating a notification topic, or notification_topic_arn when using an existing topic."
+    condition = var.enable_notifications ? (
+      var.create_notification_topic ? var.alert_email != null : var.notification_topic_arn != null
+    ) : true
+    error_message = "When enable_notifications is true, provide alert_email (if creating a topic) or notification_topic_arn (if using an existing topic)."
   }
 }
 
 variable "alert_email" {
-  description = "Email address that receives non-compliance alerts (must confirm the SNS subscription). Required and used only when create_notification_topic is true."
+  description = "Email address that receives non-compliance alerts (must confirm the SNS subscription). Required and used only when create_notification_topic is true and enable_notifications is true."
   type        = string
   default     = null
 }
