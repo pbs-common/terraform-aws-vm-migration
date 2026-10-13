@@ -1,11 +1,17 @@
 variable "notification_topic_arn" {
-  description = "Optional SNS topic ARN for non-compliance alerts. If not provided, a dedicated topic will be created and alert_email will be used for subscriptions."
+  description = "SNS topic ARN for non-compliance alerts when create_notification_topic is false."
   type        = string
   default     = null
+}
+
+variable "create_notification_topic" {
+  description = "Whether to create a dedicated SNS topic for non-compliance alerts."
+  type        = bool
+  default     = true
 
   validation {
-    condition     = var.notification_topic_arn != null || var.alert_email != null
-    error_message = "At least one of notification_topic_arn or alert_email must be provided."
+    condition     = var.create_notification_topic ? var.alert_email != null : var.notification_topic_arn != null
+    error_message = "Provide alert_email when creating a notification topic, or notification_topic_arn when using an existing topic."
   }
 }
 

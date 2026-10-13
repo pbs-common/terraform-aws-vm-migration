@@ -264,27 +264,27 @@ resource "aws_config_config_rule" "ec2_alarms" {
 # Alerting: Config compliance change -> EventBridge -> SNS
 # ---------------------------------------------------------------------------
 
-# If no external topic is provided, create a dedicated one and subscribe email to it.
+# Create a dedicated topic and subscribe email to it when requested.
 resource "aws_sns_topic" "alerts" {
-  count = var.notification_topic_arn == null ? 1 : 0
+  count = var.create_notification_topic ? 1 : 0
   name  = "${var.rule_name}-alerts"
   tags  = merge(var.tags, { Name = "${var.rule_name}-alerts" })
 }
 
 resource "aws_sns_topic_subscription" "email" {
-  count     = var.notification_topic_arn == null && var.alert_email != null ? 1 : 0
+  count     = var.create_notification_topic && var.alert_email != null ? 1 : 0
   topic_arn = aws_sns_topic.alerts[0].arn
   protocol  = "email"
   endpoint  = var.alert_email
 }
 
 locals {
-  # Use provided topic if available, otherwise use the created one
-  notification_topic_arn = var.notification_topic_arn != null ? var.notification_topic_arn : aws_sns_topic.alerts[0].arn
+  # Use the created topic when requested, otherwise use the provided topic
+  notification_topic_arn = var.create_notification_topic ? aws_sns_topic.alerts[0].arn : var.notification_topic_arn
 }
 
 resource "aws_sns_topic_policy" "alerts" {
-  count = var.notification_topic_arn == null ? 1 : 0
+  count = var.create_notification_topic ? 1 : 0
   arn   = aws_sns_topic.alerts[0].arn
 
   policy = jsonencode({
