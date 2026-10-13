@@ -34,7 +34,7 @@ resource "aws_s3_bucket_versioning" "lambda_artifacts" {
 
 resource "aws_s3_bucket" "config" {
   count  = var.create_recorder ? 1 : 0
-  bucket = "${var.config_bucket_name_prefix}-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}"
+  bucket = "${var.config_bucket_name_prefix}-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}"
   tags   = merge(var.tags, { Name = "${var.rule_name}-config" })
 }
 
