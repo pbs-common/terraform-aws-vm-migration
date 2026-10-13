@@ -1,6 +1,7 @@
 # AWS Config EC2 Compliance Module
 
-Automatically enforce that every EC2 instance in your account has CloudWatch alarms for **CPU**, **memory**, and **disk** metrics. Uses AWS Config to detect non-compliance and optionally sends alerts via SNS.
+Monitor whether active EC2 instances in the current AWS Region have CloudWatch alarms for **CPU**, **memory**, and **disk** metrics. This module uses AWS 
+Config to detect non-compliance and can optionally send alerts via SNS.
 
 ## Quick Start
 
@@ -274,7 +275,8 @@ Use the Lambda test console with this event:
 If you get "Recorder not running" or similar:
 - A pre-existing recorder in your account is already managing Config state
 - Set `create_recorder = false` to avoid conflicts
-- Use `terraform state rm` to remove the managed recorder from state without deleting it
+- Review the Terraform plan and migrate ownership of the recorder and its dependencies before changing `create_recorder`; do not remove only the recorder
+  from state
 
 ## Architecture Details
 
