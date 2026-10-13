@@ -333,25 +333,3 @@ resource "aws_cloudwatch_event_target" "sns" {
     input_template = "\"EC2 instance <instance> (account <account>, <region>) is missing required CloudWatch alarms. <annotation>\""
   }
 }
-
-# If using an external topic, add EventBridge permission to it.
-resource "aws_sns_topic_policy" "external_alerts" {
-  count = var.notification_topic_arn != null ? 1 : 0
-  arn   = var.notification_topic_arn
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Sid       = "AllowEventBridgePublish"
-      Effect    = "Allow"
-      Principal = { Service = "events.amazonaws.com" }
-      Action    = "sns:Publish"
-      Resource  = var.notification_topic_arn
-      Condition = {
-        ArnEquals = {
-          "aws:SourceArn" = aws_cloudwatch_event_rule.noncompliant.arn
-        }
-      }
-    }]
-  })
-}

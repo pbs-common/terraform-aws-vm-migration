@@ -2,6 +2,11 @@ variable "notification_topic_arn" {
   description = "Optional SNS topic ARN for non-compliance alerts. If not provided, a dedicated topic will be created and alert_email will be used for subscriptions."
   type        = string
   default     = null
+
+  validation {
+    condition     = var.notification_topic_arn != null || var.alert_email != null
+    error_message = "At least one of notification_topic_arn or alert_email must be provided."
+  }
 }
 
 variable "alert_email" {
@@ -75,7 +80,7 @@ variable "require_alarm_actions" {
 }
 
 variable "tags" {
-  description = "Tags to apply to every resource created by this module, merged with an automatic Name tag from var.name."
+  description = "Tags to apply to every resource created by this module, merged with an automatic Name tag from var.rule_name."
   type        = map(string)
   default     = {}
 }
