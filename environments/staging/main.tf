@@ -86,6 +86,15 @@ module "cloudwatch_alerts" {
   tags = var.tags
 }
 
+module "config" {
+  source = "../../modules/config"
+
+  notification_topic_arn = module.cloudwatch_alerts.sns_topic_arns["critical"]
+  create_recorder        = false
+
+  tags = var.tags
+}
+
 resource "aws_instance" "esb_rtm01_qa" {
   ami           = "ami-09722327218b378f6"
   instance_type = "m5.large"
