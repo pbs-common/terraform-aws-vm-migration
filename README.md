@@ -9,7 +9,7 @@ All Terraform runs in GitHub Actions. There are no local `init`, `plan`, or `app
 against the shared state, except for `environments/org-delegation` (see
 [Environments not run by CI](#environments-not-run-by-ci)).
 
-> **Upcoming migration.** The `modules/` directory is moving to external module repositories
+> **Upcoming migration.** The `modules/` directory is moving to the central module repository
 > shortly. See [Planned migration](#planned-migration-modules) before adding to it.
 
 ---
@@ -28,6 +28,8 @@ against the shared state, except for `environments/org-delegation` (see
 │   │   ├── check_terraform_ci_coverage.py       Fails CI if a Terraform directory is not covered
 │   │   └── test_check_terraform_ci_coverage.py  Mutation self-test for the checker
 │   └── terraform-ci-coverage-exclusions.json    Directories deliberately not planned by CI
+├── docs/
+│   └── migration.md                             Plan for moving modules/ to the central repo
 ├── environments/                                Root modules, one per deployment target
 │   ├── ad/                                      AD domain controllers, workstations, backup, alarms
 │   ├── dev/  staging/  prod/  workspaces/       Per-account baselines: AWS Backup, CloudWatch alarms
@@ -177,26 +179,20 @@ Full detail, troubleshooting, and the steps for adding a new environment are in
 
 ## Planned migration: modules
 
-The `modules/` directory is moving to external repositories shortly. This repository will then
-contain only environment root modules, entrypoint workflows, CI coverage tooling, and the MGN
-agent scripts.
+Everything under `modules/` is moving to the central module repository,
+`pbs-common/<central-modules-repo>`. This repository will then contain only environment root
+modules, entrypoint workflows, CI coverage tooling, and the MGN agent scripts.
 
-Everything under `modules/` will move to external module repositories. Expected changes here
-when that happens:
+Until the cutover, coordinate any significant module changes so they are not lost in the move.
 
-- Each environment's `source = "../../modules/<name>"` changes to a Git source pinned to a
-  specific tag or commit.
-- The `modules/**` entries drop out of each entrypoint workflow's `paths:` filters, and
-  `check_terraform_ci_coverage.py` and the exclusions file are updated to match.
-- Module changes no longer trigger a plan here; an environment picks up a module change only
-  when its pinned version is bumped.
-
-Until the move, coordinate any significant module changes so they are not lost in the cutover.
+The cutover sequence, the exact changes required in each file of this repository, and the
+behaviour after the move are in [docs/migration.md](docs/migration.md).
 
 ---
 
 ## Related documentation
 
+- [docs/migration.md](docs/migration.md) — moving `modules/` to the central module repository
 - [.github/workflows/README.md](.github/workflows/README.md) — pipeline user guide, manual runs,
   troubleshooting, adding an environment
 - [environments/README.md](environments/README.md) — GitHub Environment secret names
