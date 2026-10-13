@@ -16,7 +16,7 @@ variable "create_notification_topic" {
 }
 
 variable "alert_email" {
-  description = "Email address that receives non-compliance alerts (must confirm the SNS subscription). Only used if notification_topic_arn is not provided."
+  description = "Email address that receives non-compliance alerts (must confirm the SNS subscription). Required and used only when create_notification_topic is true."
   type        = string
   default     = null
 }
