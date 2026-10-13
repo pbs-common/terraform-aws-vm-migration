@@ -7,7 +7,7 @@ variable "notification_topic_arn" {
 variable "create_notification_topic" {
   description = "Whether to create a dedicated SNS topic for non-compliance alerts."
   type        = bool
-  default     = true
+  default     = false
 
   validation {
     condition     = var.create_notification_topic ? var.alert_email != null : var.notification_topic_arn != null
