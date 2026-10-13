@@ -74,6 +74,11 @@ resource "aws_sns_topic_policy" "this" {
         Principal = { Service = "cloudwatch.amazonaws.com" }
         Action    = "sns:Publish"
         Resource  = aws_sns_topic.this[each.key].arn
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = split(":", aws_sns_topic.this[each.key].arn)[4]
+          }
+        }
       },
       {
         Sid       = "AllowEventBridge"
