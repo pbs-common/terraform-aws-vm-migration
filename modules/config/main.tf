@@ -266,13 +266,13 @@ resource "aws_config_config_rule" "ec2_alarms" {
 
 # Create a dedicated topic and subscribe email to it when requested.
 resource "aws_sns_topic" "alerts" {
-  count = var.create_notification_topic ? 1 : 0
+  count = var.enable_notifications && var.create_notification_topic ? 1 : 0
   name  = "${var.rule_name}-alerts"
   tags  = merge(var.tags, { Name = "${var.rule_name}-alerts" })
 }
 
 resource "aws_sns_topic_subscription" "email" {
-  count     = var.create_notification_topic ? 1 : 0
+  count     = var.enable_notifications && var.create_notification_topic && var.alert_email != null ? 1 : 0
   topic_arn = aws_sns_topic.alerts[0].arn
   protocol  = "email"
   endpoint  = var.alert_email
@@ -280,7 +280,7 @@ resource "aws_sns_topic_subscription" "email" {
 
 locals {
   # Use the created topic when requested, otherwise use the provided topic
-  notification_topic_arn = var.create_notification_topic ? aws_sns_topic.alerts[0].arn : var.notification_topic_arn
+  notification_topic_arn = var.enable_notifications && var.create_notification_topic ? aws_sns_topic.alerts[0].arn : var.notification_topic_arn
 }
 
 resource "aws_cloudwatch_event_rule" "noncompliant" {
