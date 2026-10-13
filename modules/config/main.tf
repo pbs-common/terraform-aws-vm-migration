@@ -16,6 +16,7 @@ locals {
 resource "aws_s3_bucket" "lambda_artifacts" {
   count  = var.lambda_artifact_s3_bucket == null ? 1 : 0
   bucket = "${var.rule_name}-lambda-artifacts-${data.aws_caller_identity.current.account_id}"
+  tags   = merge(var.tags, { Name = "${var.rule_name}-lambda-artifacts" })
 }
 
 resource "aws_s3_bucket_versioning" "lambda_artifacts" {
@@ -33,7 +34,8 @@ resource "aws_s3_bucket_versioning" "lambda_artifacts" {
 
 resource "aws_s3_bucket" "config" {
   count  = var.create_recorder ? 1 : 0
-  bucket = "${var.config_bucket_name_prefix}-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.name}"
+  bucket = "${var.config_bucket_name_prefix}-${data.aws_caller_identity.current.account_id}-${data.aws_region.current.region}"
+  tags   = merge(var.tags, { Name = "${var.rule_name}-config" })
 }
 
 resource "aws_s3_bucket_versioning" "config" {
@@ -72,6 +74,7 @@ resource "aws_s3_bucket_policy" "config" {
 resource "aws_iam_role" "config_recorder" {
   count = var.create_recorder ? 1 : 0
   name  = "${var.rule_name}-recorder"
+  tags  = merge(var.tags, { Name = "${var.rule_name}-recorder" })
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -163,6 +166,7 @@ resource "null_resource" "checker_upload" {
 
 resource "aws_iam_role" "checker" {
   name = "${var.rule_name}-lambda"
+  tags = merge(var.tags, { Name = "${var.rule_name}-lambda" })
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -207,6 +211,7 @@ resource "aws_lambda_function" "checker" {
   s3_key           = local.checker_s3_key
   source_code_hash = local.checker_source_hash
   timeout          = 300
+  tags             = merge(var.tags, { Name = var.rule_name })
 
   environment {
     variables = {
@@ -237,6 +242,7 @@ resource "aws_lambda_permission" "config" {
 resource "aws_config_config_rule" "ec2_alarms" {
   name        = var.rule_name
   description = "Every EC2 instance must have CloudWatch alarms for CPU, memory and disk."
+  tags        = merge(var.tags, { Name = var.rule_name })
 
   source {
     owner             = "CUSTOM_LAMBDA"
@@ -258,39 +264,29 @@ resource "aws_config_config_rule" "ec2_alarms" {
 # Alerting: Config compliance change -> EventBridge -> SNS
 # ---------------------------------------------------------------------------
 
+# Create a dedicated topic and subscribe email to it when requested.
 resource "aws_sns_topic" "alerts" {
-  name = "${var.rule_name}-alerts"
+  count = var.enable_notifications && var.create_notification_topic ? 1 : 0
+  name  = "${var.rule_name}-alerts"
+  tags  = merge(var.tags, { Name = "${var.rule_name}-alerts" })
 }
 
 resource "aws_sns_topic_subscription" "email" {
-  topic_arn = aws_sns_topic.alerts.arn
+  count     = var.enable_notifications && var.create_notification_topic && var.alert_email != null ? 1 : 0
+  topic_arn = aws_sns_topic.alerts[0].arn
   protocol  = "email"
   endpoint  = var.alert_email
 }
 
-resource "aws_sns_topic_policy" "alerts" {
-  arn = aws_sns_topic.alerts.arn
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Sid       = "AllowEventBridgePublish"
-      Effect    = "Allow"
-      Principal = { Service = "events.amazonaws.com" }
-      Action    = "sns:Publish"
-      Resource  = aws_sns_topic.alerts.arn
-      Condition = {
-        ArnEquals = {
-          "aws:SourceArn" = aws_cloudwatch_event_rule.noncompliant.arn
-        }
-      }
-    }]
-  })
+locals {
+  # Use the created topic when requested, otherwise use the provided topic
+  notification_topic_arn = var.enable_notifications && var.create_notification_topic ? aws_sns_topic.alerts[0].arn : var.notification_topic_arn
 }
 
 resource "aws_cloudwatch_event_rule" "noncompliant" {
   name        = "${var.rule_name}-noncompliant"
   description = "An EC2 instance became non-compliant with ${var.rule_name}."
+  tags        = merge(var.tags, { Name = "${var.rule_name}-noncompliant" })
 
   event_pattern = jsonencode({
     source        = ["aws.config"]
@@ -303,8 +299,9 @@ resource "aws_cloudwatch_event_rule" "noncompliant" {
 }
 
 resource "aws_cloudwatch_event_target" "sns" {
+  count = var.enable_notifications ? 1 : 0
   rule = aws_cloudwatch_event_rule.noncompliant.name
-  arn  = aws_sns_topic.alerts.arn
+  arn  = local.notification_topic_arn
 
   input_transformer {
     input_paths = {

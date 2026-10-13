@@ -310,9 +310,14 @@ import {
 }
 
 module "config" {
-  source          = "../../modules/config"
-  alert_email     = "billy.mclean@protagona.com"
-  create_recorder = false
+  source = "../../modules/config"
+
+  notification_topic_arn    = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  enable_notifications      = false
+  create_notification_topic = false
+  create_recorder           = false
+
+  tags = var.tags
 }
 
 module "sbap01_alarms" {

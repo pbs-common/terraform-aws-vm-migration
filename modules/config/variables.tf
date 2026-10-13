@@ -1,6 +1,32 @@
-variable "alert_email" {
-  description = "Email address that receives non-compliance alerts (must confirm the SNS subscription)."
+variable "notification_topic_arn" {
+  description = "SNS topic ARN for non-compliance alerts when create_notification_topic is false."
   type        = string
+  default     = null
+}
+
+variable "create_notification_topic" {
+  description = "Whether to create a dedicated SNS topic for non-compliance alerts."
+  type        = bool
+  default     = false
+}
+
+variable "enable_notifications" {
+  description = "Whether to send alerts on non-compliance. Set to false to evaluate compliance without sending alerts (useful for testing)."
+  type        = bool
+  default     = true
+
+  validation {
+    condition = var.enable_notifications ? (
+      var.create_notification_topic ? var.alert_email != null : var.notification_topic_arn != null
+    ) : true
+    error_message = "When enable_notifications is true, provide alert_email (if creating a topic) or notification_topic_arn (if using an existing topic)."
+  }
+}
+
+variable "alert_email" {
+  description = "Email address that receives non-compliance alerts (must confirm the SNS subscription). Required and used only when create_notification_topic is true and enable_notifications is true."
+  type        = string
+  default     = null
 }
 
 variable "lambda_artifact_s3_bucket" {
@@ -65,4 +91,10 @@ variable "require_alarm_actions" {
   description = "Only count alarms that have actions enabled and at least one alarm action."
   type        = bool
   default     = true
+}
+
+variable "tags" {
+  description = "Tags to apply to every resource created by this module, merged with an automatic Name tag from var.rule_name."
+  type        = map(string)
+  default     = {}
 }
