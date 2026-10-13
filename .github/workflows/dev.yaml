@@ -22,6 +22,7 @@ on:
       # one is absent.
       - "environments/dev/**"
       - "modules/backup/**"
+      - "modules/ec2-workload/**"
       - "modules/cloudwatch-alerts/**"
       - "modules/instance-alarms/**"
       - "modules/config/**"
@@ -40,6 +41,7 @@ on:
       - "environments/dev/**"
       - "modules/backup/**"
       - "modules/cloudwatch-alerts/**"
+      - "modules/ec2-workload/**"
       - "modules/instance-alarms/**"
       - "modules/config/**"
       - ".tflint.hcl"
