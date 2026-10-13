@@ -60,42 +60,6 @@ resource "aws_sns_topic" "this" {
   tags = merge(var.tags, { Name = "${var.name}-${each.key}-alerts" })
 }
 
-resource "aws_sns_topic_policy" "this" {
-  for_each = local.managed_channels
-
-  arn = aws_sns_topic.this[each.key].arn
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid       = "AllowCloudWatchAlarms"
-        Effect    = "Allow"
-        Principal = { Service = "cloudwatch.amazonaws.com" }
-        Action    = "sns:Publish"
-        Resource  = aws_sns_topic.this[each.key].arn
-        Condition = {
-          StringEquals = {
-            "aws:SourceAccount" = split(":", aws_sns_topic.this[each.key].arn)[4]
-          }
-        }
-      },
-      {
-        Sid       = "AllowEventBridge"
-        Effect    = "Allow"
-        Principal = { Service = "events.amazonaws.com" }
-        Action    = "sns:Publish"
-        Resource  = aws_sns_topic.this[each.key].arn
-        Condition = {
-          StringEquals = {
-            "aws:SourceAccount" = split(":", aws_sns_topic.this[each.key].arn)[4]
-          }
-        }
-      }
-    ]
-  })
-}
-
 resource "aws_sns_topic_subscription" "email" {
   for_each = local.email_subscriptions
 

@@ -283,27 +283,6 @@ locals {
   notification_topic_arn = var.create_notification_topic ? aws_sns_topic.alerts[0].arn : var.notification_topic_arn
 }
 
-resource "aws_sns_topic_policy" "alerts" {
-  count = var.create_notification_topic ? 1 : 0
-  arn   = aws_sns_topic.alerts[0].arn
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Sid       = "AllowEventBridgePublish"
-      Effect    = "Allow"
-      Principal = { Service = "events.amazonaws.com" }
-      Action    = "sns:Publish"
-      Resource  = aws_sns_topic.alerts[0].arn
-      Condition = {
-        ArnEquals = {
-          "aws:SourceArn" = aws_cloudwatch_event_rule.noncompliant.arn
-        }
-      }
-    }]
-  })
-}
-
 resource "aws_cloudwatch_event_rule" "noncompliant" {
   name        = "${var.rule_name}-noncompliant"
   description = "An EC2 instance became non-compliant with ${var.rule_name}."

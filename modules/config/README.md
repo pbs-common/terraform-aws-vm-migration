@@ -65,6 +65,8 @@ This module enforces that **every EC2 instance in your account has CloudWatch al
 - **SNS Topic**: Receives alerts and routes to configured destinations (email, Slack, PagerDuty, etc.)
 - **Routing**: Alerts go to the SNS topic specified by `notification_topic_arn` (or created locally if `create_notification_topic = true`)
 
+Within the same AWS account, no resource policies are needed—IAM permissions and AWS service integrations handle the authorization automatically.
+
 ## Configuration Modes
 
 ### Mode 1: With External SNS Topic (Recommended for Staging/Prod)
