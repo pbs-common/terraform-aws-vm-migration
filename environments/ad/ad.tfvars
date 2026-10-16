@@ -59,22 +59,4 @@ ad_security_groups = {
 
 key_name = null
 
-# MGN Configuration
-environment_name            = "ad"
-mgn_staging_az              = "us-east-1a"
-mgn_staging_subnet_cidr     = "172.31.100.0/24"
-mgn_create_internet_gateway = false
-mgn_internet_gateway_id     = null
-mgn_source_vpc_cidr_blocks  = ["10.0.0.0/8"]
-mgn_cross_account_role_arns = []
-enable_mgn_ebs_encryption   = true
-mgn_kms_key_arn             = null
-
-# Common tags for MGN resources
-common_tags = {
-  "map-migrated"            = "mig5T578AWUOW"
-  "pbs:billing:environment" = "ad"
-  "pbs:billing:product"     = "active-directory"
-  "pbs:billing:owner"       = "infra"
-  "repo"                    = "https://github.com/pbs-common/terraform-aws-vm-migration.git"
-}
+dso_topic_arn = "arn:aws:sns:us-east-1:600417784090:email-to-dso"

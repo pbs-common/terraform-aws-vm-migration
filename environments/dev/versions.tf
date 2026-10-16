@@ -8,8 +8,10 @@ terraform {
     }
   }
 
-  # bucket/key/region supplied at `terraform init` time
   backend "s3" {
+    bucket       = "pbs-dev-terraform-state"
+    key          = "dev/terraform.tfstate"
+    region       = "us-east-1"
     use_lockfile = true
   }
 }
