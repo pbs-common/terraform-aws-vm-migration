@@ -271,6 +271,30 @@ resource "aws_sns_topic" "alerts" {
   tags  = merge(var.tags, { Name = "${var.rule_name}-alerts" })
 }
 
+resource "aws_sns_topic_policy" "alerts" {
+  count = var.enable_notifications && var.create_notification_topic ? 1 : 0
+
+  arn = aws_sns_topic.alerts[0].arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AllowEventBridgeToPublish"
+        Effect    = "Allow"
+        Principal = { Service = "events.amazonaws.com" }
+        Action    = "sns:Publish"
+        Resource  = aws_sns_topic.alerts[0].arn
+        Condition = {
+          StringEquals = {
+            "AWS:SourceAccount" = split(":", aws_sns_topic.alerts[0].arn)[4]
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_sns_topic_subscription" "email" {
   count     = var.enable_notifications && var.create_notification_topic && var.alert_email != null ? 1 : 0
   topic_arn = aws_sns_topic.alerts[0].arn

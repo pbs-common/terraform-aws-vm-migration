@@ -288,14 +288,9 @@ The evaluator distinguishes metrics by **both namespace and name**:
 
 This prevents false positives where custom metrics with identical names could incorrectly mark instances as compliant.
 
-### Why No SNS Topic Policy in Config Module?
+### SNS Topic Permissions
 
-Within the same AWS account:
-- CloudWatch alarms have built-in permission to publish to SNS
-- EventBridge also has service-level permission in same-account scenarios
-- Resource policies (topic policies) are **only needed for cross-account access**
-
-The `cloudwatch-alerts` module manages topic policies for all its managed topics, granting both CloudWatch and EventBridge permission to publish.
+The module adds a topic policy to its dedicated SNS topic, allowing EventBridge to publish alerts from the same AWS account. For a BYO topic, configure its resource policy to allow the `events.amazonaws.com` service principal to call `sns:Publish`; this is required even when the topic and EventBridge rule are in the same account.
 
 ### S3-Based Lambda Deployment
 
