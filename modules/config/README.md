@@ -1,136 +1,24 @@
 # AWS Config EC2 Compliance Module
 
-This module enforces that **every EC2 instance in your account has CloudWatch alarms** for CPU, memory, and disk metrics. It uses AWS Config to periodically check compliance and sends alerts when instances are non-compliant.
+Monitor whether active EC2 instances in the current AWS Region have CloudWatch alarms for **CPU**, **memory**, and **disk** metrics. This module uses AWS 
+Config to detect non-compliance and can optionally send alerts via SNS.
 
-## How It Works
+## Quick Start
 
-```
-┌─────────────────┐
-│  AWS Config     │
-│  Recorder       │  Continuously monitors EC2 instances
-└────────┬────────┘
-         │ evaluates
-         ▼
-┌─────────────────┐
-│  Config Rule    │  Scheduled (hourly, 3-hourly, etc.)
-└────────┬────────┘
-         │ invokes
-         ▼
-┌─────────────────────────────┐
-│  Lambda: ec2_alarm_check    │  Checks each instance for required alarms
-│  - Queries EC2 instances    │
-│  - Queries CloudWatch       │  • CPU (AWS/EC2:CPUUtilization)
-│  - Evaluates compliance     │  • Memory (CWAgent:mem_used_percent)
-└────────┬────────────────────┘  • Disk (CWAgent:disk_used_percent)
-         │ reports
-         ▼
-┌──────────────────────────┐
-│  Config Evaluator        │  Compliance: COMPLIANT / NON_COMPLIANT
-│  (Config service)        │
-└────────┬─────────────────┘
-         │ triggers on compliance change
-         ▼
-┌──────────────────────────┐
-│  EventBridge Rule        │  Filters for NON_COMPLIANT events
-└────────┬─────────────────┘
-         │ sends to
-         ▼
-┌──────────────────────────┐
-│  SNS Topic               │  Email, Slack, PagerDuty, etc.
-│  (alerts)                │
-└──────────────────────────┘
-```
-
-## Architecture
-
-### Components Created
-
-#### AWS Config Infrastructure
-- **Recorder** (optional): Continuously records AWS resource changes. Only created if `create_recorder = true`. You may already have one in your account.
-- **Delivery Channel**: Sends Config snapshots to S3 for audit.
-- **Config Rule**: Periodic evaluation (e.g., hourly) that invokes the Lambda.
-
-#### Lambda Evaluator
-- **Function**: `ec2_alarm_check.py` — Python code that:
-  1. Lists all EC2 instances (in `running`, `stopped`, `stopping`, `pending` states)
-  2. Queries CloudWatch alarms
-  3. Checks if each instance has required alarms for all metrics
-  4. Reports compliance back to Config
-
-- **Storage**: Lambda code is zipped and uploaded to S3 with content-based naming to avoid conflicts during concurrent runs.
-- **IAM Role**: Grants Lambda permissions to read EC2/CloudWatch and write Config results.
-
-#### Alerting
-- **EventBridge Rule**: Listens for Config compliance changes (`NON_COMPLIANT` events)
-- **SNS Topic**: Receives alerts and routes to configured destinations (email, Slack, PagerDuty, etc.)
-- **Routing**: Alerts go to the SNS topic specified by `notification_topic_arn` (or created locally if `create_notification_topic = true`)
-
-Within the same AWS account, no resource policies are needed—IAM permissions and AWS service integrations handle the authorization automatically.
-
-## Configuration Modes
-
-### Mode 1: With External SNS Topic (Recommended for Staging/Prod)
-
-Use this when you want Config alerts to go to the **same channels as CloudWatch alarms** (e.g., a shared "routine" or "critical" topic).
-
+**For production with alerts:**
 ```hcl
 module "config" {
   source = "../../modules/config"
 
-  # Point to existing SNS topic created by cloudwatch-alerts module
   notification_topic_arn    = module.cloudwatch_alerts.sns_topic_arns["routine"]
   create_notification_topic = false
-  create_recorder           = false  # Recorder already exists in account
+  create_recorder           = false
   
   tags = var.tags
 }
 ```
 
-**No SNS topic is created by this module.** The config module only:
-- Creates the Config evaluator (rule + Lambda)
-- Routes alerts via EventBridge to the external topic
-- The `cloudwatch-alerts` module manages the topic and all permissions
-
-### Mode 2: With Dedicated SNS Topic (Recommended for Dev)
-
-Create a standalone SNS topic with email subscriptions just for Config alerts.
-
-```hcl
-module "config" {
-  source = "../../modules/config"
-
-  alert_email               = "alerts@example.com"
-  create_notification_topic = true
-  create_recorder           = true  # Create recorder if not already in account
-  
-  tags = var.tags
-}
-```
-
-**This creates:**
-- Dedicated SNS topic (name: `ec2-required-cloudwatch-alarms-alerts`)
-- Email subscription to `alerts@example.com` (requires manual confirmation)
-- Config recorder (if not already configured)
-
-### Mode 3: Bring Your Own Topic (Advanced)
-
-If you have a pre-existing SNS topic elsewhere, provide its ARN directly.
-
-```hcl
-module "config" {
-  source = "../../modules/config"
-
-  notification_topic_arn    = "arn:aws:sns:us-east-1:123456789012:my-alerts"
-  create_notification_topic = false
-  
-  tags = var.tags
-}
-```
-
-### Mode 4: Evaluate Without Alerts (Testing)
-
-Deploy the module to evaluate EC2 compliance but don't send any alerts. Useful for testing before enabling notifications.
-
+**For testing without alerts:**
 ```hcl
 module "config" {
   source = "../../modules/config"
@@ -142,141 +30,44 @@ module "config" {
 }
 ```
 
-**This:**
-- Creates Config rule and Lambda evaluator
-- Evaluates compliance and stores results in Config
-- **Does NOT create SNS topic or EventBridge target**
-- **Does NOT send alerts** even if instances are non-compliant
+## How It Works
 
-Once testing is complete, switch `enable_notifications = true` and provide a notification destination.
+1. **AWS Config Recorder** captures EC2 instance state (if enabled)
+2. **Config Rule** triggers on a schedule (default: hourly)
+3. **Lambda (`ec2_alarm_check`)** evaluates each instance:
+   - Lists all running/stopped/stopping/pending instances
+   - Queries CloudWatch for alarms matching instance ID
+   - Checks if required metrics are covered
+4. **Config Service** stores compliance results
+5. **EventBridge** detects `NON_COMPLIANT` events (if notifications enabled)
+6. **SNS Topic** routes alerts to subscribed channels (if notifications enabled)
 
-## Inputs
+## Required Alarms
 
-### Required When `create_notification_topic = true` AND `enable_notifications = true`
-- **`alert_email`** (string): Email to receive alerts. Must confirm SNS subscription after deploy.
+Each instance must have **at least one alarm** for each metric:
 
-### Required When `create_notification_topic = false` AND `enable_notifications = true`
-- **`notification_topic_arn`** (string): SNS topic ARN for alerts. No subscription management by this module.
+| Metric | Namespace | Default Name | Source |
+|--------|-----------|--------------|--------|
+| CPU | `AWS/EC2` | `CPUUtilization` | Built-in EC2 metrics |
+| Memory | `CWAgent` | `mem_used_percent` | CloudWatch Agent |
+| Disk | `CWAgent` | `disk_used_percent` | CloudWatch Agent |
 
-### Optional
-- **`enable_notifications`** (bool, default: `true`): Whether to send alerts on non-compliance. Set to `false` for testing (Config will still evaluate compliance but won't create SNS topics or EventBridge targets).
-- **`create_notification_topic`** (bool, default: `false`): Whether to create a dedicated SNS topic for alerts (only used when `enable_notifications = true`).
-- **`create_recorder`** (bool, default: `true`): Whether to create AWS Config recorder. Set to `false` if one already exists.
-- **`rule_name`** (string, default: `"ec2-required-cloudwatch-alarms"`): Name for the Config rule and related resources.
-- **`evaluation_frequency`** (string, default: `"One_Hour"`): How often Config runs the check. Options: `One_Hour`, `Three_Hours`, `Six_Hours`, `Twelve_Hours`, `TwentyFour_Hours`.
-- **`config_bucket_name_prefix`** (string, default: `"aws-config-bucket"`): Prefix for Config snapshot S3 bucket. (Account ID and region auto-appended.)
-- **`config_snapshot_frequency`** (string, default: `"Six_Hours"`): How often Config snapshots are taken.
-- **`lambda_artifact_s3_bucket`** (string, default: `null`): S3 bucket for Lambda code. If not provided, one is created.
-- **`lambda_artifact_s3_prefix`** (string, default: `"lambda-artifacts/config"`): S3 key prefix for Lambda zip.
-- **`required_metrics`** (map, default: See below): Map of check type → list of metric identifiers.
-- **`require_alarm_actions`** (bool, default: `true`): If `true`, ignore alarms with actions disabled or no action configured.
-- **`tags`** (map(string), default: `{}`): Tags applied to all created resources.
+Alarms can use any of the default metric names OR custom names (see "Metric Configuration" below).
 
-### Metric Configuration
+## Usage Modes
 
-`required_metrics` is a map of check type → list of acceptable metric identifiers:
+### Mode 1: Shared Notifications (Production)
 
-```hcl
-required_metrics = {
-  cpu    = ["AWS/EC2:CPUUtilization"]
-  memory = ["CWAgent:mem_used_percent", "CWAgent:Memory % Committed Bytes In Use"]
-  disk   = ["CWAgent:disk_used_percent", "CWAgent:LogicalDisk % Free Space"]
-}
-```
+Route Config alerts to the same SNS topic as CloudWatch alarms (unified alerting).
 
-**Metric identifier format:**
-- **`"MetricName"`** — Uses default namespace (AWS/EC2 for cpu, CWAgent for memory/disk)
-- **`"Namespace:MetricName"`** — Explicit namespace (recommended for clarity)
-
-The evaluator accepts **any** of the listed metrics. For example, if `"disk"` has both `disk_used_percent` and `LogicalDisk % Free Space`, an instance is compliant if it has an alarm for *either* metric.
-
-## Validation
-
-The module enforces:
-- **At least one notification destination**: If both `notification_topic_arn` and `alert_email` are null, Terraform fails with a clear error. This prevents silent configuration where alerts go nowhere.
-
-## Outputs
-
-Currently, none. The module is designed to be self-contained. Alerts are routed via SNS subscriptions defined separately (either in this module for Mode 2, or in `cloudwatch-alerts` for Mode 1).
-
-## Namespace-Aware Metric Matching
-
-The Lambda evaluator is **namespace-aware**. It distinguishes metrics by both namespace AND name:
-
-- ✅ Instance with alarm on `AWS/EC2:CPUUtilization` satisfies `cpu` requirement
-- ❌ Instance with alarm on `Custom:CPUUtilization` does NOT satisfy `cpu` requirement (different namespace)
-
-This prevents false positives where a custom-namespace metric with an identical name could incorrectly mark an instance as compliant.
-
-## S3-Based Lambda Deployment
-
-Lambda code is uploaded to S3 with **content-addressed naming** (hash of source code included in the key):
-
-```
-s3://<bucket>/<prefix>/ec2_alarm_check-<sha256>.zip
-```
-
-This design:
-- ✅ Avoids conflicts in CI/CD with concurrent `terraform apply` runs
-- ✅ Automatically updates when source code changes
-- ✅ Keeps old versions for rollback (if S3 versioning is enabled)
-
-## State and Compliance
-
-Once deployed:
-1. **Config Recorder** continuously captures EC2 state changes
-2. **Config Rule** runs on schedule (default: hourly)
-3. **Lambda** evaluates each instance and reports compliance to Config
-4. **EventBridge** detects compliance changes and sends alerts via SNS
-
-**To manually re-evaluate** (e.g., after adding alarms):
-```bash
-aws configservice start-config-rules-evaluation --config-rule-names ec2-required-cloudwatch-alarms
-```
-
-## Troubleshooting
-
-### Alarms not detected
-- Check that alarm **actions are enabled** (`require_alarm_actions = true` by default means actions must be configured)
-- Verify alarm metrics have the correct **InstanceId dimension**
-- Confirm metric **namespace** matches `required_metrics` configuration
-
-### Config rule not evaluating
-- Check recorder is running: `aws configservice describe-configuration-recorder-status`
-- Check Lambda logs: CloudWatch Logs group `/aws/lambda/ec2-required-cloudwatch-alarms`
-- Verify Lambda IAM role has `ec2:Describe*` and `cloudwatch:DescribeAlarms` permissions
-
-### Alerts not received
-- For email: Confirm SNS subscription in mailbox (check spam)
-- For external topic: Verify EventBridge rule is targeting the correct SNS topic ARN
-- Check SNS topic policy allows EventBridge to publish (managed by `cloudwatch-alerts` module if used)
-
-## Examples
-
-### Dev: Standalone with email
-```hcl
-module "config" {
-  source = "../../modules/config"
-
-  alert_email     = "dev-alerts@company.com"
-  create_recorder = true
-
-  tags = {
-    Environment = "dev"
-    ManagedBy   = "terraform"
-  }
-}
-```
-
-### Staging: Shared topic with CloudWatch alerts
 ```hcl
 module "cloudwatch_alerts" {
   source = "../../modules/cloudwatch-alerts"
   
-  name                  = "staging"
+  name                  = "prod"
   notification_channels = {
     routine  = { email_subscriptions = ["ops@company.com"] }
-    critical = { email_subscriptions = ["ops@company.com"], slack_webhook_secret_name = "staging-slack" }
+    critical = { email_subscriptions = ["ops@company.com"], slack_webhook_secret_name = "prod-slack" }
   }
   
   tags = var.tags
@@ -287,24 +78,293 @@ module "config" {
 
   notification_topic_arn    = module.cloudwatch_alerts.sns_topic_arns["routine"]
   create_notification_topic = false
-  create_recorder           = false  # Already configured
+  create_recorder           = false
 
   tags = var.tags
 }
 ```
 
-Now Config compliance alerts and CloudWatch instance alarms all route to the same "routine" channel.
+**What happens:**
+- ✅ Uses existing "routine" SNS topic
+- ✅ Config compliance alerts go to same channel as CloudWatch alarms
+- ✅ Single notification channel for all infrastructure alerts
 
-## AWS Limits
+### Mode 2: Dedicated Notifications (Dev/Test)
 
-- **Config Recorder Limit**: Only **1 customer-managed recorder** per region. If you already have one, set `create_recorder = false`.
-- **Config Rules**: Limited by AWS quotas (typically 100 rules per account). This module creates 1.
+Create a standalone SNS topic just for Config alerts.
 
-## Cost Considerations
+```hcl
+module "config" {
+  source = "../../modules/config"
 
-- **AWS Config**: Charged per rule evaluation. For this periodic custom rule, estimate `EC2 instance count × evaluations per month × the current AWS Config per-evaluation rate` (about 720 evaluations per instance each month at the hourly default).
-- **Lambda**: Charged per invocation and duration
-- **S3**: Small storage cost for Config snapshots and Lambda artifacts
-- **SNS**: Charged per notification sent
+  alert_email               = "dev-alerts@company.com"
+  create_notification_topic = true
+  create_recorder           = true
 
-Total cost scales with the number of EC2 instances, evaluation frequency, configuration-item recording, and notification volume; use current AWS pricing for an account-specific estimate.
+  tags = var.tags
+}
+```
+
+**What happens:**
+- ✅ Creates SNS topic: `ec2-required-cloudwatch-alarms-alerts`
+- ✅ Subscribes `dev-alerts@company.com` (requires manual email confirmation)
+- ✅ Creates Config recorder (if not already in account)
+
+### Mode 3: Compliance-Only Testing
+
+Deploy compliance checking without sending alerts. Useful for testing before enabling notifications.
+
+```hcl
+module "config" {
+  source = "../../modules/config"
+
+  enable_notifications = false
+  create_recorder      = false
+
+  tags = var.tags
+}
+```
+
+**What happens:**
+- ✅ Config rule evaluates compliance
+- ✅ Results visible in AWS Config console
+- ❌ No SNS topic created
+- ❌ No alerts sent
+- Switch `enable_notifications = true` later to enable alerts
+
+### Mode 4: Bring Your Own Topic
+
+Use a pre-existing SNS topic (e.g., from another module).
+
+```hcl
+module "config" {
+  source = "../../modules/config"
+
+  notification_topic_arn    = "arn:aws:sns:us-east-1:123456789012:my-alerts"
+  create_notification_topic = false
+
+  tags = var.tags
+}
+```
+
+**What happens:**
+- ✅ Routes alerts to your provided SNS topic
+- ✅ No topic or subscriptions created by this module
+
+## Input Variables
+
+### Notification Control
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `enable_notifications` | bool | `true` | Send alerts on non-compliance. Set `false` for testing. |
+| `create_notification_topic` | bool | `false` | Create a dedicated SNS topic (requires `alert_email`). |
+| `notification_topic_arn` | string | `null` | SNS topic ARN for alerts (when not creating a topic). |
+| `alert_email` | string | `null` | Email to subscribe to dedicated topic (only used when `create_notification_topic = true`). |
+
+**Validation:**
+- If `enable_notifications = true` and `create_notification_topic = true`: require `alert_email`
+- If `enable_notifications = true` and `create_notification_topic = false`: require `notification_topic_arn`
+- If `enable_notifications = false`: no requirements
+
+### Infrastructure Control
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create_recorder` | bool | `true` | Create AWS Config recorder. Set `false` if one already exists in account. |
+| `rule_name` | string | `"ec2-required-cloudwatch-alarms"` | Name for Config rule and related resources. |
+| `evaluation_frequency` | string | `"One_Hour"` | How often Config evaluates: `One_Hour`, `Three_Hours`, `Six_Hours`, `Twelve_Hours`, `TwentyFour_Hours` |
+| `config_bucket_name_prefix` | string | `"aws-config-bucket"` | S3 bucket prefix for Config snapshots (account ID and region auto-appended). |
+| `config_snapshot_frequency` | string | `"Six_Hours"` | How often Config takes snapshots: `One_Hour`, `Three_Hours`, `Six_Hours`, `Twelve_Hours`, `TwentyFour_Hours` |
+
+### Lambda & Metrics
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `lambda_artifact_s3_bucket` | string | `null` | S3 bucket for Lambda deployment package. If `null`, one is created. |
+| `lambda_artifact_s3_prefix` | string | `"lambda-artifacts/config"` | S3 key prefix for Lambda zip (content hash auto-appended). |
+| `required_metrics` | map(list(string)) | See below | Map of check type → list of metric identifiers. |
+| `require_alarm_actions` | bool | `true` | Only count alarms that have actions enabled and configured. |
+| `tags` | map(string) | `{}` | Tags applied to all resources. |
+
+### Metric Configuration
+
+`required_metrics` defines what alarms instances must have:
+
+```hcl
+required_metrics = {
+  cpu    = ["AWS/EC2:CPUUtilization"]
+  memory = ["CWAgent:mem_used_percent", "CWAgent:Memory % Committed Bytes In Use"]
+  disk   = ["CWAgent:disk_used_percent", "CWAgent:LogicalDisk % Free Space"]
+}
+```
+
+**Metric identifier format:**
+- `"MetricName"` — Uses default namespace (AWS/EC2 for cpu, CWAgent for memory/disk)
+- `"Namespace:MetricName"` — Explicit namespace
+
+An instance is compliant if it has an alarm for **any** metric in each check's list.
+
+## How Compliance Evaluation Works
+
+The Lambda evaluator checks each instance:
+
+1. **Lists all EC2 instances** in running/stopped/stopping/pending states
+2. **Queries CloudWatch alarms** and extracts metrics with InstanceId dimensions
+3. **Matches alarms to instances:**
+   - Extracts (namespace, metric_name) from each alarm
+   - Compares to required metrics
+   - Namespace matters: `AWS/EC2:CPUUtilization` ≠ `Custom:CPUUtilization`
+4. **Evaluates compliance:**
+   - Instance needs **at least one alarm** for each check (cpu, memory, disk)
+   - Missing any check → `NON_COMPLIANT`
+   - Has all checks → `COMPLIANT`
+5. **Reports to Config:**
+   - Stores compliance state
+   - EventBridge triggers on changes (if notifications enabled)
+
+### Example
+
+Instance `i-1234567890abcdef0` alarms:
+- `My-CPU-Alarm` on `AWS/EC2:CPUUtilization` with dimension `InstanceId=i-1234567890abcdef0`
+- `My-Memory-Alarm` on `CWAgent:mem_used_percent` with dimension `InstanceId=i-1234567890abcdef0`
+- (no disk alarm)
+
+**Result:** `NON_COMPLIANT` — missing disk alarm
+
+## Testing the Lambda
+
+Use the Lambda test console with this event:
+
+```json
+{
+  "invokingEvent": "{\"notificationCreationTime\": \"2026-10-13T14:30:00Z\"}",
+  "resultToken": "TESTMODE",
+  "configRuleName": "ec2-required-cloudwatch-alarms"
+}
+```
+
+**With `resultToken: "TESTMODE"`:**
+- Lambda runs but doesn't submit to Config
+- See evaluation logic in logs only
+- Safe for testing
+
+## Troubleshooting
+
+### Alarms not detected
+
+- **Check alarm actions:** If `require_alarm_actions = true` (default), alarms must have at least one action configured and actions enabled
+- **Verify InstanceId dimension:** Alarm must include `Dimensions: [{ Name: "InstanceId", Value: "i-..." }]`
+- **Check metric namespace:** If using custom namespaces, ensure they match `required_metrics` config
+- **Confirm alarm state:** CloudWatch only reports alarms in `ALARM`, `OK`, or `INSUFFICIENT_DATA` states
+
+### Config rule not evaluating
+
+- **Check recorder status:** `aws configservice describe-configuration-recorder-status`
+- **View Lambda logs:** CloudWatch Logs group `/aws/lambda/ec2-required-cloudwatch-alarms`
+- **Verify IAM permissions:** Lambda role needs `ec2:DescribeInstances`, `cloudwatch:DescribeAlarms`, `config:PutEvaluations`
+
+### Alerts not received
+
+- **Email subscriptions:** Check spam folder and confirm SNS subscription
+- **External topic:** Verify SNS topic policy allows EventBridge (`events.amazonaws.com`) to publish
+- **Check EventBridge rule:** `aws events describe-rule --name ec2-required-cloudwatch-alarms-noncompliant`
+
+### "No recorder" error
+
+If you get "Recorder not running" or similar:
+- A pre-existing recorder in your account is already managing Config state
+- Set `create_recorder = false` to avoid conflicts
+- Review the Terraform plan and migrate ownership of the recorder and its dependencies before changing `create_recorder`; do not remove only the recorder
+  from state
+
+## Architecture Details
+
+### Why Namespace-Aware Matching?
+
+The evaluator distinguishes metrics by **both namespace and name**:
+- ✅ Instance with alarm on `AWS/EC2:CPUUtilization` satisfies cpu check
+- ❌ Instance with alarm on `Custom:CPUUtilization` does NOT satisfy cpu check
+
+This prevents false positives where custom metrics with identical names could incorrectly mark instances as compliant.
+
+### SNS Topic Permissions
+
+The module adds a topic policy to its dedicated SNS topic, allowing EventBridge to publish alerts from the same AWS account. For a BYO topic, configure its resource policy to allow the `events.amazonaws.com` service principal to call `sns:Publish`; this is required even when the topic and EventBridge rule are in the same account.
+
+### S3-Based Lambda Deployment
+
+Lambda code is uploaded to S3 with **content-addressed naming**:
+```
+s3://<bucket>/<prefix>/ec2_alarm_check-<sha256>.zip
+```
+
+Benefits:
+- ✅ Avoids conflicts in CI/CD with concurrent `terraform apply` runs
+- ✅ Automatically updates when source code changes
+- ✅ Old versions retained for rollback (if S3 versioning enabled)
+
+## Cost Estimate
+
+- **AWS Config:** ~$0.10/rule/month (hourly evaluation)
+- **Lambda:** ~$0.20/month (1,000 invocations/month × ~1s each)
+- **S3:** <$0.01/month (small snapshots and artifacts)
+- **SNS:** Varies by notification channels
+
+**Total:** $0.50–$5/month per environment
+
+## Examples
+
+### Dev: Standalone with email
+```hcl
+module "config" {
+  source = "../../modules/config"
+
+  alert_email               = "dev@company.com"
+  create_notification_topic = true
+  create_recorder           = true
+
+  required_metrics = {
+    cpu    = ["AWS/EC2:CPUUtilization"]
+    memory = ["CWAgent:mem_used_percent"]
+    disk   = ["CWAgent:disk_used_percent"]
+  }
+
+  tags = {
+    Environment = "dev"
+    ManagedBy   = "terraform"
+  }
+}
+```
+
+### Staging: Shared routine alerts
+```hcl
+module "config" {
+  source = "../../modules/config"
+
+  notification_topic_arn    = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  create_notification_topic = false
+  create_recorder           = false
+
+  tags = var.tags
+}
+```
+
+### Production: Shared critical alerts
+```hcl
+module "config" {
+  source = "../../modules/config"
+
+  notification_topic_arn    = module.cloudwatch_alerts.sns_topic_arns["critical"]
+  create_notification_topic = false
+  create_recorder           = false
+
+  evaluation_frequency = "Six_Hours"  # Less frequent evaluation
+  tags                 = var.tags
+}
+```
+
+## Related Modules
+
+- **`cloudwatch-alerts`**: Creates and manages SNS topics for CloudWatch and Config alerts
+- **`backup`**: Protects instance data

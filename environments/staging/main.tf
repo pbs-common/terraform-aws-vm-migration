@@ -89,10 +89,9 @@ module "cloudwatch_alerts" {
 module "config" {
   source = "../../modules/config"
 
-  notification_topic_arn    = module.cloudwatch_alerts.sns_topic_arns["routine"]
-  enable_notifications      = false
-  create_notification_topic = false
-  create_recorder           = false
+  notification_topic_arn = module.cloudwatch_alerts.sns_topic_arns["routine"]
+  enable_notifications   = true
+  create_recorder        = false
 
   tags = var.tags
 }
