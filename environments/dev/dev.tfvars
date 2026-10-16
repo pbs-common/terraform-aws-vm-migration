@@ -17,3 +17,5 @@ tags = {
   "pbs:billing:owner"       = "infra"
   "repo"                    = "https://github.com/pbs-common/terraform-aws-vm-migration.git"
 }
+
+dso_topic_arn = "arn:aws:sns:us-east-1:600417784090:email-to-dso"
