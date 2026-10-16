@@ -60,9 +60,8 @@ resource "aws_sns_topic" "this" {
   tags = merge(var.tags, { Name = "${var.name}-${each.key}-alerts" })
 }
 
-# CloudWatch alarms can publish to SNS automatically. EventBridge rules also need
-# permission. This policy grants both services (and any other same-account services)
-# to publish to the topics this module creates.
+# EventBridge requires an unconditional publish grant. Keep CloudWatch's grant scoped
+# to this account.
 resource "aws_sns_topic_policy" "this" {
   for_each = local.managed_channels
 
@@ -72,16 +71,23 @@ resource "aws_sns_topic_policy" "this" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowCloudWatchAndEventBridge"
+        Sid       = "AllowEventBridgeToPublish"
         Effect    = "Allow"
-        Principal = { Service = ["cloudwatch.amazonaws.com", "events.amazonaws.com"] }
+        Principal = { Service = "events.amazonaws.com" }
+        Action    = "sns:Publish"
+        Resource  = aws_sns_topic.this[each.key].arn
+      },
+      {
+        Sid       = "AllowCloudWatchToPublish"
+        Effect    = "Allow"
+        Principal = { Service = "cloudwatch.amazonaws.com" }
         Action    = "sns:Publish"
         Resource  = aws_sns_topic.this[each.key].arn
         Condition = {
-           StringEquals = {
-             "AWS:SourceAccount" = split(":", aws_sns_topic.this[each.key].arn)[4]
-           }
-         }
+          StringEquals = {
+            "AWS:SourceAccount" = split(":", aws_sns_topic.this[each.key].arn)[4]
+          }
+        }
       }
     ]
   })

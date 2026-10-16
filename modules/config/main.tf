@@ -285,11 +285,6 @@ resource "aws_sns_topic_policy" "alerts" {
         Principal = { Service = "events.amazonaws.com" }
         Action    = "sns:Publish"
         Resource  = aws_sns_topic.alerts[0].arn
-        Condition = {
-          StringEquals = {
-            "AWS:SourceAccount" = split(":", aws_sns_topic.alerts[0].arn)[4]
-          }
-        }
       }
     ]
   })
