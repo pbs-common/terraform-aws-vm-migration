@@ -86,6 +86,21 @@ module "cloudwatch_alerts" {
   tags = var.tags
 }
 
+# mgn-test-sg is created by MGN and not managed here; this only adds ICMP so on-prem can ping.
+# Same on-prem CIDRs as environments/ad (ad_security_groups.on_prem).
+resource "aws_vpc_security_group_ingress_rule" "mgn_test_sg_icmp" {
+  for_each = toset(["10.168.0.0/16", "10.68.0.0/16"])
+
+  security_group_id = "sg-07959bd4aa2f2bc03"
+  description       = "ICMP from on-prem ${each.value}"
+  ip_protocol       = "icmp"
+  from_port         = -1
+  to_port           = -1
+  cidr_ipv4         = each.value
+
+  tags = merge(var.tags, { Name = "mgn-test-sg-icmp" })
+}
+
 module "amsi01_alarms" {
   source = "../../modules/instance-alarms"
 
