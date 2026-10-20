@@ -57,3 +57,21 @@ variable "service_principals" {
     error_message = "service_principals must include both \"mgn.amazonaws.com\" and \"member.org.stacksets.cloudformation.amazonaws.com\". AWS Transform needs both on one account: MGN to administer migrations, StackSets because it deploys with CallAs=DELEGATED_ADMIN. Removing the StackSets principal plans a DESTROY of the live delegation without erroring. Extra principals are allowed."
   }
 }
+
+# Set ONLY when rebuilding this directory's state from empty and an organization
+# resource policy is already live. Empty on every normal run, which imports nothing.
+# There is no data source for this resource, so it cannot be derived from live state
+# the way the delegated-administrator imports are -- see resource-policy.tf.
+#
+# Find the id with:  aws organizations describe-resource-policy \
+#                      --query 'ResourcePolicy.ResourcePolicySummary.Id' --output text
+variable "existing_resource_policy_id" {
+  description = "Id (rp-*) of an existing organization resource policy to adopt instead of creating one. Empty means create."
+  type        = string
+  default     = ""
+
+  validation {
+    condition     = var.existing_resource_policy_id == "" || can(regex("^rp-[0-9a-z]+$", var.existing_resource_policy_id))
+    error_message = "existing_resource_policy_id must be empty or an organization resource policy id of the form rp-<alphanumeric>."
+  }
+}
