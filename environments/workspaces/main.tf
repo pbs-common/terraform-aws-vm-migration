@@ -71,6 +71,20 @@ resource "aws_vpc_security_group_ingress_rule" "mgn_test_sg_icmp" {
 
   tags = merge(var.tags, { Name = "mgn-test-sg-icmp" })
 }
+
+# Same unmanaged mgn-test-sg as above; this only adds SMB so PDQ can deploy to the hosts.
+resource "aws_vpc_security_group_ingress_rule" "mgn_test_sg_smb" {
+  for_each = toset(["10.168.0.0/16", "10.68.0.0/16"])
+
+  security_group_id = "sg-0e7b8a3a98448298e"
+  description       = "SMB (PDQ) from on-prem ${each.value}"
+  ip_protocol       = "tcp"
+  from_port         = 445
+  to_port           = 445
+  cidr_ipv4         = each.value
+
+  tags = merge(var.tags, { Name = "mgn-test-sg-smb" })
+}
 # Migrated instances from MGN
 resource "aws_instance" "i_ng_ws_zc_t1_l" {
   ami           = "ami-0b84981f84c45e189"
