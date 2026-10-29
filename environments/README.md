@@ -8,7 +8,7 @@ Note: GitHub Environment secrets are write-only — their values can never be re
 API, so these subfolders record which secret/variable *names* each environment must provide, not values.
 
 | Environment | Required secrets |
-|---|---|---|
+|---|---|
 | [dev](dev/) | `OIDC_ROLE_ARN` |
 | [staging](staging/) | `OIDC_ROLE_ARN` |
 | [prod](prod/) | `OIDC_ROLE_ARN` |
